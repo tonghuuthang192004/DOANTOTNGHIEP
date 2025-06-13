@@ -18,9 +18,6 @@ class IconAndTextWidget extends StatelessWidget {
         Icon(icon,color: iconColor,size: Dimensions.iconSize24,),
         SizedBox(width: 5,),
         SmallText(text: text),
-
-
-
       ],
     );
   }

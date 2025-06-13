@@ -16,6 +16,8 @@ const lightColorScheme = ColorScheme(
   onSurface: Color(0xFF1A1C18),
 );
 
+
+
 const darkColorScheme = ColorScheme(
   brightness: Brightness.dark,
   primary: Color(0xFF416FDF),
@@ -30,6 +32,7 @@ const darkColorScheme = ColorScheme(
   outlineVariant: Color(0xFFC2C8BC),
   surface: Color(0xFFF9FAF3),
   onSurface: Color(0xFF1A1C18),
+
 );
 
 ThemeData lightMode = ThemeData(

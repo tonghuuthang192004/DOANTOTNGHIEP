@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../home/HomeCreen.dart';
+import '../../widgets/bottom_navigation_bar.dart';
+import '../home/HomeScreen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -12,7 +13,7 @@ class WelcomeScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Image.asset('images/boy.png'),
+          Image.asset('images/fried_chicken.png'),
           SizedBox(
             height: 10,
           ),
@@ -40,7 +41,10 @@ class WelcomeScreen extends StatelessWidget {
           ),
           InkWell(
             onTap: () {
-              Navigator.push(context,MaterialPageRoute(builder: (context)=>HomeCreen(),));
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => MainNavigation()),
+              );
             },
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 20, vertical: 50),
@@ -60,8 +64,14 @@ class WelcomeScreen extends StatelessWidget {
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(width: 10,),
-                  Icon(Icons.arrow_forward_ios,color: Colors.white,size: 20,),
+                  SizedBox(
+                    width: 10,
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ],
               ),
             ),
