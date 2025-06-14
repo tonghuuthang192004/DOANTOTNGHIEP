@@ -71,23 +71,23 @@ class _BannerPromotionState extends State<BannerPromotion> {
                             ),
                           ),
                         ),
-                        Positioned(
-                          left: 20,
-                          bottom: 20,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Giảm 30%",
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold)),
-                              Text("Cho đơn hàng đầu tiên",
-                                  style: TextStyle(
-                                      color: Colors.white70, fontSize: 16)),
-                            ],
-                          ),
-                        ),
+                        // Positioned(
+                        //   left: 20,
+                        //   bottom: 20,
+                        //   child: Column(
+                        //     crossAxisAlignment: CrossAxisAlignment.start,
+                        //     children: [
+                        //       Text("Giảm 30%",
+                        //           style: TextStyle(
+                        //               color: Colors.white,
+                        //               fontSize: 24,
+                        //               fontWeight: FontWeight.bold)),
+                        //       Text("Cho đơn hàng đầu tiên",
+                        //           style: TextStyle(
+                        //               color: Colors.white70, fontSize: 16)),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),

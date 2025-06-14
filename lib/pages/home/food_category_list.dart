@@ -1,42 +1,65 @@
 import 'package:flutter/material.dart';
 
+import '../../models/Home/category_model.dart';
 import '../../utils/dimensions.dart';
-import 'HomeScreen.dart';
 
 class FoodCategoryList extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onCategorySelected;
+  final List<CategoryModel> categories = CategoryModel.sampleCategories();
 
-  FoodCategoryList({required this.selectedIndex, required this.onCategorySelected});
+  FoodCategoryList({
+    required this.selectedIndex,
+    required this.onCategorySelected,
+  });
+
+
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 100,
+      height: Dimensions.height100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
         padding: EdgeInsets.symmetric(horizontal: Dimensions.width10),
-        itemCount: foodCategories.length,
         itemBuilder: (context, index) {
-          final item = foodCategories[index];
-          final isSelected = selectedIndex == index;
+          final category = categories[index];
+          final isSelected = index == selectedIndex;
+
           return GestureDetector(
             onTap: () => onCategorySelected(index),
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 300),
-              margin: EdgeInsets.symmetric(horizontal: 8),
-              padding: EdgeInsets.all(16),
+            child: Container(
+              margin: EdgeInsets.only(right: Dimensions.width10),
+              padding: EdgeInsets.symmetric(
+                vertical: Dimensions.height10,
+                horizontal: Dimensions.width15,
+              ),
               decoration: BoxDecoration(
-                //scolor: isSelected ? Colors.orange : item['color'],
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: isSelected ? [BoxShadow(color: Colors.orange.withOpacity(0.3), blurRadius: 10, offset: Offset(0, 5))] : [],
+                color: isSelected ? Colors.orange.shade100 : Colors.white,
+                borderRadius: BorderRadius.circular(Dimensions.height15),
+                border: Border.all(
+                  color: isSelected ? Colors.orange : Colors.grey.shade300,
+                  width: 1.5,
+                ),
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(item['icon'], color: isSelected ? Colors.white : Colors.grey[700], size: 30),
-                  SizedBox(height: 8),
-                  Text(item['name'], style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: isSelected ? Colors.white : Colors.grey[700])),
+                  Image.asset(
+                    category.image,
+                    width: Dimensions.width40,
+                    height: Dimensions.height40,
+                    fit: BoxFit.contain,
+                  ),
+                  SizedBox(height: Dimensions.height5),
+                  Text(
+                    category.name,
+                    style: TextStyle(
+                      fontSize: Dimensions.font14,
+                      fontWeight: FontWeight.w500,
+                      color: isSelected ? Colors.orange : Colors.black87,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -46,3 +69,4 @@ class FoodCategoryList extends StatelessWidget {
     );
   }
 }
+
