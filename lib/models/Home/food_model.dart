@@ -70,6 +70,7 @@ List<Food> foods = [
 
 ];
 
+
 final List<Map<String, dynamic>> foodCategories = [
   {
     'name': 'Burger',
