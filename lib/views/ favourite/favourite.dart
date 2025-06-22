@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../utils/dimensions.dart';
+
 
 class Product {
   final String name;

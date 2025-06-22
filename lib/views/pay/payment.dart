@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:frontendtn1/pages/pay/payment.dart';
-
 import '../../utils/dimensions.dart';
 import '../../widgets/bottom_navigation_bar.dart';
 
@@ -145,24 +143,6 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
       centerTitle: true,
       elevation: 0,
       backgroundColor: const Color(0xFFF8F9FA),
-      // actions: [
-      //   Container(
-      //     margin: const EdgeInsets.only(right: 16),
-      //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      //     decoration: BoxDecoration(
-      //       color: const Color(0xFF4CAF50).withOpacity(0.1),
-      //       borderRadius: BorderRadius.circular(20),
-      //     ),
-      //     // child: const Text(
-      //     //   'Bước 2/2',
-      //     //   style: TextStyle(
-      //     //     color: Color(0xFF4CAF50),
-      //     //     fontWeight: FontWeight.bold,
-      //     //     fontSize: 12,
-      //     //   ),
-      //     // ),
-      //   ),
-      // ],
     );
   }
 

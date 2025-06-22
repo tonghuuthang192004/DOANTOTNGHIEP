@@ -1,40 +1,42 @@
 import 'package:flutter/material.dart';
-
-import '../../models/Home/category_model.dart';
+import '../../models/home/category_model.dart';
 import '../../utils/dimensions.dart';
 
-class FoodCategoryList extends StatelessWidget {
+class FoodCategoryList extends StatefulWidget {
   final int selectedIndex;
-  final Function(int) onCategorySelected;
-  final List<CategoryModel> categories = CategoryModel.sampleCategories();
+  final Function(CategoryModel, int) onCategorySelected;
+  final List<CategoryModel> categories;
 
-  FoodCategoryList({
+  const FoodCategoryList({
+    Key? key,
     required this.selectedIndex,
     required this.onCategorySelected,
-  });
+    required this.categories,
+  }) : super(key: key);
 
+  @override
+  State<FoodCategoryList> createState() => _FoodCategoryListState();
+}
 
-
+class _FoodCategoryListState extends State<FoodCategoryList> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: Dimensions.height100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
+        itemCount: widget.categories.length,
         padding: EdgeInsets.symmetric(horizontal: Dimensions.width10),
         itemBuilder: (context, index) {
-          final category = categories[index];
-          final isSelected = index == selectedIndex;
+          final category = widget.categories[index];
+          final isSelected = index == widget.selectedIndex;
 
           return GestureDetector(
-            onTap: () => onCategorySelected(index),
+            onTap: () => widget.onCategorySelected(category, index),
             child: Container(
+              width: Dimensions.width100, // Thêm width cố định
+              height: Dimensions.height100,
               margin: EdgeInsets.only(right: Dimensions.width10),
-              padding: EdgeInsets.symmetric(
-                vertical: Dimensions.height10,
-                horizontal: Dimensions.width15,
-              ),
               decoration: BoxDecoration(
                 color: isSelected ? Colors.orange.shade100 : Colors.white,
                 borderRadius: BorderRadius.circular(Dimensions.height15),
@@ -44,16 +46,23 @@ class FoodCategoryList extends StatelessWidget {
                 ),
               ),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset(
-                    category.image,
+                  Image.network(
+                    category.hinhAnh ?? 'https://via.placeholder.com/60',
                     width: Dimensions.width40,
                     height: Dimensions.height40,
                     fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.broken_image, size: 40);
+                    },
                   ),
                   SizedBox(height: Dimensions.height5),
                   Text(
-                    category.name,
+                    category.ten ?? 'Không tên',
+                    textAlign: TextAlign.center,
+                    maxLines: 2, // giới hạn dòng
+                    overflow: TextOverflow.ellipsis, // nếu quá dài
                     style: TextStyle(
                       fontSize: Dimensions.font14,
                       fontWeight: FontWeight.w500,
@@ -69,4 +78,3 @@ class FoodCategoryList extends StatelessWidget {
     );
   }
 }
-

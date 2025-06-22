@@ -1,7 +1,7 @@
 // import 'package:flutter/material.dart';
 // import 'dart:math';
 //
-// import '../pages/home/HomeScreen.dart';
+// import '../views/home/home_screen.dart';
 //
 // class SidebarMenu extends StatefulWidget {
 //   const SidebarMenu({super.key});
@@ -58,7 +58,7 @@
 //                         children: const [
 //                           ListTile(
 //                             leading: Icon(Icons.home, color: Colors.white),
-//                             title: Text('Home',
+//                             title: Text('home',
 //                                 style: TextStyle(color: Colors.white)),
 //                           ),
 //                           ListTile(
