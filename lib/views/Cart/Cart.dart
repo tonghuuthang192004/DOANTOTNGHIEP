@@ -15,14 +15,14 @@ const klightGrey = Color(0xFFF5F5F5);
 const kgreen = Color(0xFF4CAF50);
 
 // Model sản phẩm
-class ProductModel {
+class ProductModel1 {
   final String name;
   final double price;
   final double rate;
   final String image;
   final int distance;
 
-  ProductModel({
+  ProductModel1({
     required this.name,
     required this.price,
     required this.rate,
@@ -33,7 +33,7 @@ class ProductModel {
 
 // Model giỏ hàng
 class CartModel {
-  final ProductModel productModel;
+  final ProductModel1 productModel;
   int quantity;
 
   CartModel({required this.productModel, required this.quantity});
@@ -52,7 +52,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
 
   List<CartModel> carts = [
     CartModel(
-      productModel: ProductModel(
+      productModel: ProductModel1(
         name: "Pizza Margherita",
         price: 12.99,
         rate: 4.5,
@@ -62,7 +62,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       quantity: 2,
     ),
     CartModel(
-      productModel: ProductModel(
+      productModel: ProductModel1(
         name: "Burger Deluxe",
         price: 9.49,
         rate: 4.2,
@@ -72,7 +72,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       quantity: 1,
     ),
     CartModel(
-      productModel: ProductModel(
+      productModel: ProductModel1(
         name: "Sushi Set",
         price: 18.99,
         rate: 4.8,
@@ -109,7 +109,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   double get tax => subtotal * 0.08; // 8% tax
   double get totalCart => subtotal + deliveryFee + tax;
 
-  void addCart(ProductModel product) {
+  void addCart(ProductModel1 product) {
     setState(() {
       final index =
       carts.indexWhere((element) => element.productModel.name == product.name);
@@ -117,7 +117,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
     });
   }
 
-  void reduceQuantity(ProductModel product) {
+  void reduceQuantity(ProductModel1 product) {
     setState(() {
       final index =
       carts.indexWhere((element) => element.productModel.name == product.name);
@@ -127,7 +127,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
     });
   }
 
-  void removeItem(ProductModel product) {
+  void removeItem(product) {
     setState(() {
       carts.removeWhere((element) => element.productModel.name == product.name);
     });

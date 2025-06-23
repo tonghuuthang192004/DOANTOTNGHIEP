@@ -9,6 +9,7 @@ class Dimensions {
   static late double pageViewTextContainer;
 
   static late double height5; // ~5 px trên màn hình 850 px cao
+
   static late double height8;
 
   static late double height10;
@@ -28,6 +29,8 @@ class Dimensions {
   static late double height45;
 
   static late double height50;
+
+  static late double height100;
 
   static late double width5;
 
@@ -51,7 +54,11 @@ class Dimensions {
 
   static late double width50;
 
+  static late double width100;
+
   static late double radius10;
+
+  static late double radius12;
 
   static late double radius15;
 
@@ -110,6 +117,7 @@ class Dimensions {
     height40 = screenHeight / 21.25;
     height45 = screenHeight / 18.89;
     height50 = screenHeight / 17;
+    height100 = screenHeight / 8.5;
 
     width5 = screenWidth / 85;
     width8 = screenWidth / 53.125;
@@ -122,13 +130,16 @@ class Dimensions {
     width40 = screenWidth / 10.63;
     width45 = screenWidth / 9.44;
     width50 = screenWidth / 8.5;
+    width100 = screenHeight / 8.5;
 
     radius10 = screenHeight / 85;
+    radius12 = screenHeight / 70;
     radius15 = screenHeight / 56.67;
     radius20 = screenHeight / 42.5;
     radius25 = screenHeight / 34;
     radius30 = screenHeight / 28.33;
 
+    font12 = screenHeight / 70.0;
     font14 = screenHeight / 60.00;
     font16 = screenHeight / 52.7;
     font18 = screenHeight / 47.22;

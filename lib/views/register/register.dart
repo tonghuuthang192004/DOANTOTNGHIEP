@@ -393,10 +393,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Simulate API call
+      // Simulate api call
       await Future.delayed(const Duration(seconds: 2));
 
-      // Here you would typically call your registration API
+      // Here you would typically call your registration api
       // Example: await AuthService.register(userData);
 
       _showMessage('Account created successfully!', isSuccess: true);
