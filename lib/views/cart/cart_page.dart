@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../models/cart/cart_model.dart';
 import '../../models/product/product_model.dart';
 import '../../services/cart/cart_service.dart';
-import '../../services/user/user_session.dart';
 import '../../utils/dimensions.dart';
 
+import '../pay/payment.dart';
 import 'cart_empty_widget.dart';
 import 'cart_header_widget.dart';
 import 'cart_item_widget.dart';
@@ -23,7 +23,6 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
 
   List<CartModel> carts = [];
-  String? userId;
 
   bool isLoading = false;
   String? error;
@@ -41,33 +40,16 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
     );
     _animationController.forward();
 
-    _initUserAndCart();
-  }
-
-  Future<void> _initUserAndCart() async {
-    final id = await UserSession.getUserId();
-    setState(() {
-      userId = id;
-    });
-
-    if (userId != null) {
-      _loadCart();
-    } else {
-      setState(() {
-        error = 'Không xác định được người dùng.';
-      });
-    }
+    _loadCart();
   }
 
   Future<void> _loadCart() async {
-    if (userId == null) return;
-
     setState(() {
       isLoading = true;
       error = null;
     });
     try {
-      final items = await CartService.fetchCart(userId!);
+      final items = await CartService.fetchCart();
       setState(() => carts = items);
     } catch (e) {
       setState(() => error = 'Lỗi kết nối hoặc máy chủ không phản hồi.\nChi tiết: ${e.toString()}');
@@ -77,9 +59,14 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   }
 
   void _add(ProductModel product) async {
-    if (userId == null) return;
-    await CartService.addToCart(userId!, product);
-    _loadCart();
+    try {
+      await CartService.addToCart(product);
+      _loadCart();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi thêm vào giỏ: $e')),
+      );
+    }
   }
 
   void _reduce(CartModel cart) async {
@@ -95,10 +82,15 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   }
 
   double get subtotal =>
-      carts.fold(0, (sum, item) => sum + item.product.gia * item.quantity);
-  double get deliveryFee => 5.99;
-  double get tax => subtotal * 0.08;
-  double get total => subtotal + deliveryFee + tax;
+      carts.fold(0, (sum, item) {
+        final price = item.product.gia;
+        final quantity = item.quantity;
+        final validPrice = price > 0 ? price : 0;
+        return sum + validPrice * quantity;
+      });
+
+
+  double get total => subtotal < 0 ? 0 : subtotal;
 
   @override
   void dispose() {
@@ -126,8 +118,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                 const SizedBox(height: 10),
                 const Text(
                   'Không thể tải giỏ hàng 😢',
-                  style: TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -154,16 +145,13 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Xác nhận'),
-                      content: const Text(
-                          'Bạn có chắc muốn xoá toàn bộ giỏ hàng?'),
+                      content: const Text('Bạn có chắc muốn xoá toàn bộ giỏ hàng?'),
                       actions: [
                         TextButton(
-                            onPressed: () =>
-                                Navigator.pop(context, false),
+                            onPressed: () => Navigator.pop(context, false),
                             child: const Text('Huỷ')),
                         ElevatedButton(
-                            onPressed: () =>
-                                Navigator.pop(context, true),
+                            onPressed: () => Navigator.pop(context, true),
                             child: const Text('Xoá')),
                       ],
                     ),
@@ -176,9 +164,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                       await _loadCart();
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content:
-                            Text('Lỗi khi xoá giỏ hàng: $e')),
+                        SnackBar(content: Text('Lỗi khi xoá giỏ hàng: $e')),
                       );
                     } finally {
                       setState(() => isLoading = false);
@@ -191,12 +177,12 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                 child: carts.isEmpty
                     ? const CartEmptyState()
                     : ListView.builder(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width20),
+                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                   itemCount: carts.length,
                   itemBuilder: (context, index) {
                     final cartItem = carts[index];
                     return CartItem(
+                      context: context,
                       cart: cartItem,
                       onAdd: () => _add(cartItem.product),
                       onReduce: () => _reduce(cartItem),
@@ -207,12 +193,13 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               ),
               if (carts.isNotEmpty)
                 CartSummary(
-                  subtotal: subtotal,
-                  deliveryFee: deliveryFee,
-                  tax: tax,
                   totalCart: total,
                   onCheckout: () {
                     // TODO: Điều hướng đến màn hình thanh toán
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CheckoutPage()),
+                    );
                   },
                 ),
             ],

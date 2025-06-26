@@ -1,10 +1,10 @@
-// 📁 lib/pages/cart/cart_item_widget.dart
-
 import 'package:flutter/material.dart';
 import '../../models/cart/cart_model.dart';
 import '../../utils/dimensions.dart';
+import 'package:intl/intl.dart';
 
 class CartItem extends StatelessWidget {
+  final BuildContext context; // 👈 Truyền context vào
   final CartModel cart;
   final VoidCallback onAdd;
   final VoidCallback onReduce;
@@ -12,11 +12,15 @@ class CartItem extends StatelessWidget {
 
   const CartItem({
     super.key,
+    required this.context,
     required this.cart,
     required this.onAdd,
     required this.onReduce,
     required this.onRemove,
   });
+  String formatCurrency(double amount) {
+    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +36,7 @@ class CartItem extends StatelessWidget {
           color: Colors.red,
           borderRadius: BorderRadius.circular(Dimensions.radius15),
         ),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.delete, color: Colors.yellow),
       ),
       child: Container(
         margin: EdgeInsets.only(bottom: Dimensions.height15),
@@ -45,11 +49,19 @@ class CartItem extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(Dimensions.radius12),
-              child: Image.asset(
+              child: Image.network(
                 cart.product.hinhAnh,
                 width: Dimensions.height100,
                 height: Dimensions.height100,
                 fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: Dimensions.height100,
+                    height: Dimensions.height100,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                  );
+                },
               ),
             ),
             SizedBox(width: Dimensions.width10),
@@ -62,9 +74,10 @@ class CartItem extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Text(
-                    '\$${cart.product.gia.toStringAsFixed(2)}',
+                    formatCurrency(cart.product.gia),
                     style: const TextStyle(color: Colors.orange),
                   ),
+
                   SizedBox(height: Dimensions.height10),
                   Row(
                     children: [
@@ -74,6 +87,39 @@ class CartItem extends StatelessWidget {
                         child: Text('${cart.quantity}', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
                       _quantityButton(Icons.add, onAdd, false),
+                      SizedBox(width: Dimensions.width10),
+                      InkWell(
+                        onTap: () async {
+                          final confirm = await showDialog<bool>(
+                            context: this.context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Xác nhận xoá'),
+                              content: const Text('Bạn có chắc muốn xoá sản phẩm này khỏi giỏ hàng?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context, false),
+                                  child: const Text('Huỷ'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  child: const Text('Xoá'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm == true) {
+                            onRemove();
+                          }
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(Dimensions.height8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(Dimensions.radius10),
+                          ),
+                          child: const Icon(Icons.delete, size: 18, color: Colors.red),
+                        ),
+                      ),
                     ],
                   )
                 ],

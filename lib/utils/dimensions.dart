@@ -8,7 +8,7 @@ class Dimensions {
   static late double pageViewContainer;
   static late double pageViewTextContainer;
 
-  static late double height5; // ~5 px trên màn hình 850 px cao
+  static late double height5;
 
   static late double height8;
 

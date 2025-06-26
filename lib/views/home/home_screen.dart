@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadCategories() async {
     try {
       final categories = await CategoryController.getCategories();
+      if (!mounted) return;
       setState(() {
         categoryList = categories.cast<CategoryModel>();
       });
@@ -41,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadHotProducts() async {
     try {
       final products = await ProductController.getHotProducts();
+      if (!mounted) return;
       setState(() {
         hotProducts = products;
       });
@@ -64,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
               HomeHeader(),
               SizedBox(height: Dimensions.height20),
 
-              /// Banner
+              /// Banner ưu đãi
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                 child: Text(
@@ -93,8 +95,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               SizedBox(height: Dimensions.height15),
+
               categoryList.isEmpty
-                  ? Center(child: CircularProgressIndicator())
+                  ? SizedBox(
+                height: Dimensions.height100,
+                child: Center(child: CircularProgressIndicator()),
+              )
                   : FoodCategoryList(
                 selectedIndex: selectedCategoryIndex,
                 categories: categoryList,
@@ -111,8 +117,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
+
               SizedBox(height: Dimensions.height30),
 
+              /// Divider
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                 child: Divider(
@@ -135,18 +143,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               SizedBox(height: Dimensions.height15),
+
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                 child: hotProducts.isEmpty
                     ? SizedBox(
-                    height: Dimensions.height100,
-                    child: Center(child: CircularProgressIndicator()))
-                    : Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-                  child: PopularFoodGrid(foods: hotProducts),
-                ),
-
+                  height: Dimensions.height100,
+                  child: Center(child: CircularProgressIndicator()),
+                )
+                    : PopularFoodGrid(foods: hotProducts),
               ),
+
               SizedBox(height: Dimensions.height30),
             ],
           ),

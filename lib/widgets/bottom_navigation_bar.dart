@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../views/favourite/favourite.dart';
+import '../models/user/user_token.dart';
+import '../views/Promotion/available_discount_page.dart';
 import '../views/cart/cart_page.dart';
-import '../views/Promotion/Promotion_screen.dart';
+import '../views/favourite/favorite_page.dart';
 import '../views/home/home_screen.dart';
 import '../views/profile/profile_screen.dart';
+
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
@@ -15,14 +17,22 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
+  int? userId;
+  bool isLoading = true;
 
-  final List<Widget> _pages = [
-    HomeScreen(),
-    PromotionPage(),
-    FavoritePage(favoriteProducts: favoriteProducts),
-    CartPage(),
-    ProfilePage(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    final id = await UserToken.getUserId();
+    setState(() {
+      userId = id;
+      isLoading = false;
+    });
+  }
 
   void _onTap(int index) {
     setState(() {
@@ -32,8 +42,21 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading || userId == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final List<Widget> pages = [
+      HomeScreen(),
+      AvailableDiscountPage(userId: userId!), // 🧾 Truyền userId
+      const FavoritePage(),
+      const CartPage(),
+      const ProfilePage(),
+    ];
+
     return Scaffold(
-      // ANIMATED BODY
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
@@ -42,10 +65,8 @@ class _MainNavigationState extends State<MainNavigation> {
             child: child,
           );
         },
-        child: _pages[_selectedIndex],
+        child: pages[_selectedIndex],
       ),
-
-      // CUSTOMIZED BOTTOM NAVIGATION BAR
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onTap,

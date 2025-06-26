@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/product/product_model.dart';
 import '../../utils/dimensions.dart';
-
+import 'package:intl/intl.dart';
 class FoodCard extends StatelessWidget {
   final ProductModel food;
   final VoidCallback onTap;
@@ -66,7 +66,7 @@ class FoodCard extends StatelessWidget {
                     ),
                     SizedBox(height: Dimensions.height5),
                     Text(
-                      "${food.gia.toInt()}₫",
+                      "${NumberFormat("#,###", "vi_VN").format(food.gia)}₫",
                       style: TextStyle(
                         fontSize: Dimensions.font16,
                         fontWeight: FontWeight.bold,
@@ -88,13 +88,6 @@ class FoodCard extends StatelessWidget {
                           ),
                         ),
                         SizedBox(width: Dimensions.width5),
-                        Text(
-                          "(120)",
-                          style: TextStyle(
-                            fontSize: Dimensions.font12,
-                            color: Colors.grey[500],
-                          ),
-                        ),
                       ],
                     ),
                   ],

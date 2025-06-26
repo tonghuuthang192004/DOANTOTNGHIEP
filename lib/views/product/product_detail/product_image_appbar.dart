@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../favourite/favourite.dart';
-
+import '../../../services/favourite/favorite_service.dart';
+import '../../favourite/favorite_page.dart';
 import '../../../utils/dimensions.dart';
 
 class ProductImageAppBar extends StatelessWidget {
@@ -104,13 +104,48 @@ class ProductImageAppBar extends StatelessWidget {
                         ),
                         SizedBox(width: Dimensions.width10),
                         // Nút yêu thích
-                        _buildIconButton(context, Icons.favorite_border, () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const FavoritePage(favoriteProducts: []),
-                            ),
-                          );
+                        _buildIconButton(context, Icons.favorite_border, () async {
+                          final productId = product?['id_san_pham'];
+                          if (productId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Không tìm thấy sản phẩm')),
+                            );
+                            return;
+                          }
+
+                          try {
+                            final userId = await FavoriteService.getCurrentUserId();
+                            if (userId == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Bạn cần đăng nhập để sử dụng')),
+                              );
+                              return;
+                            }
+
+                            final favorites = await FavoriteService.getFavorites(userId);
+                            final exists = favorites.any((p) => p.id == productId);
+
+                            if (exists) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('💡 Sản phẩm đã có trong yêu thích')),
+                              );
+                            } else {
+                              final success = await FavoriteService.addFavorite(productId);
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('❤️ Đã thêm vào yêu thích')),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('❌ Thêm yêu thích thất bại')),
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Lỗi: $e')),
+                            );
+                          }
                         }),
                       ],
                     ),

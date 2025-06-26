@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../../utils/dimensions.dart';
 
 class RelatedProductCard extends StatelessWidget {
@@ -86,7 +87,7 @@ class RelatedProductCard extends StatelessWidget {
           ),
           SizedBox(height: Dimensions.height5),
           Text(
-            "${price.toStringAsFixed(0)}đ",
+            "${NumberFormat("#,###", "vi_VN").format(price)}đ",
             style: const TextStyle(
               color: Colors.orange,
               fontWeight: FontWeight.bold,

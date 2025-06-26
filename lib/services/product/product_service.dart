@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 import '../../api/api_constants.dart';
 import '../../models/product/product_model.dart';
+import '../../models/user/user_token.dart';
 
 class ProductService {
   // Lấy sản phẩm theo danh mục
@@ -104,6 +105,35 @@ class ProductService {
     } catch (e) {
       print('Lỗi khi kết nối hoặc phân tích JSON chi tiết sản phẩm: $e');
       return null;
+    }
+  }
+  /// ✅ Gửi đánh giá sản phẩm
+  static Future<bool> submitReview({
+    required int productId,
+    required int score,
+    String? comment,
+  }) async {
+    final token = await UserToken.getToken();
+    final url = Uri.parse('${API.baseUrl}/ratings'); // hoặc endpoint bạn đã đặt
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'id_san_pham': productId,
+        'diem_so': score,
+        'nhan_xet': comment ?? '',
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      print('❌ Lỗi khi gửi đánh giá: ${response.body}');
+      return false;
     }
   }
 }
