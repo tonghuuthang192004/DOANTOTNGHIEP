@@ -37,13 +37,28 @@ class CartController extends ChangeNotifier {
   /// Thêm sản phẩm vào giỏ
   Future<void> addProduct(String userId, ProductModel product) async {
     try {
-      await CartService.addToCart(userId, product);
+      CartModel? existingItem;
+      try {
+        existingItem = _cartItems.firstWhere((item) => item.product.id == product.id);
+      } catch (e) {
+        existingItem = null;
+      }
+
+      if (existingItem != null) {
+        final newQuantity = existingItem.quantity + 1;
+        await CartService.updateQuantity(existingItem.id.toString(), newQuantity);
+      } else {
+        await CartService.addToCart(userId, product);
+      }
+
       await loadCart(userId);
     } catch (e) {
       error = "Không thể thêm sản phẩm: $e";
       notifyListeners();
     }
   }
+
+
 
   /// Cập nhật số lượng sản phẩm
   Future<void> updateQuantity(String itemId, int quantity, String userId) async {

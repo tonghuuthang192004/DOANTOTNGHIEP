@@ -191,12 +191,12 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                 child: carts.isEmpty
                     ? const CartEmptyState()
                     : ListView.builder(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: Dimensions.width20),
+                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                   itemCount: carts.length,
                   itemBuilder: (context, index) {
                     final cartItem = carts[index];
                     return CartItem(
+                      context: context, // 👈 THÊM DÒNG NÀY
                       cart: cartItem,
                       onAdd: () => _add(cartItem.product),
                       onReduce: () => _reduce(cartItem),
@@ -204,6 +204,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                     );
                   },
                 ),
+
               ),
               if (carts.isNotEmpty)
                 CartSummary(
