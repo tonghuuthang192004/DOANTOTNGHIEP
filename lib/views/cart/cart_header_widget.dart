@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../utils/dimensions.dart';
+import '../../widgets/bottom_navigation_bar.dart';
 
 class CartHeader extends StatelessWidget {
   final int itemCount;
-  final VoidCallback? onClearAll; // Thêm callback xóa toàn bộ
+  final VoidCallback? onClearAll;
 
   const CartHeader({
     super.key,
@@ -30,16 +31,30 @@ class CartHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Expanded(
+          // ⬅️ Nút quay lại
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const MainNavigation()),
+                    (route) => false, // Xoá toàn bộ các route cũ
+              );
+            },
+          ),
+          // 🧾 Tiêu đề ở giữa
+          Expanded(
             child: Text(
               "Giỏ hàng của tôi",
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
+
+          // 🔢 Số lượng sản phẩm
           Container(
             padding: EdgeInsets.all(Dimensions.height10),
             decoration: BoxDecoration(
@@ -56,13 +71,13 @@ class CartHeader extends StatelessWidget {
             ),
           ),
 
-          // Thêm nút Xoá tất cả nếu có onClearAll và itemCount > 0
+          // 🗑 Nút xoá tất cả
           if (itemCount > 0 && onClearAll != null)
             Padding(
-              padding: EdgeInsets.only(left: Dimensions.width15),
+              padding: EdgeInsets.only(left: Dimensions.width10),
               child: TextButton.icon(
                 onPressed: onClearAll,
-                icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+                icon: const Icon(Icons.delete_forever, color: Colors.redAccent, size: 20),
                 label: const Text(
                   "Xoá tất cả",
                   style: TextStyle(color: Colors.redAccent),

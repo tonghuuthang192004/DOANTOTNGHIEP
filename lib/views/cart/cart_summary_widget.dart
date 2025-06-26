@@ -1,19 +1,13 @@
-// 📁 lib/pages/cart/cart_summary_widget.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // ✅ Định dạng VNĐ
 import '../../utils/dimensions.dart';
 
 class CartSummary extends StatelessWidget {
-  final double subtotal;
-  final double deliveryFee;
-  final double tax;
   final double totalCart;
   final VoidCallback onCheckout;
 
   const CartSummary({
     super.key,
-    required this.subtotal,
-    required this.deliveryFee,
-    required this.tax,
     required this.totalCart,
     required this.onCheckout,
   });
@@ -35,12 +29,8 @@ class CartSummary extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildPriceRow("Tạm tính", subtotal),
-          SizedBox(height: Dimensions.height10),
-          _buildPriceRow("Phí giao hàng", deliveryFee),
-          SizedBox(height: Dimensions.height10),
-          _buildPriceRow("Thuế", tax),
-          Divider(height: Dimensions.height20),
+          _buildPriceRow("Tạm tính", totalCart), // <-- Thêm dòng này
+          const SizedBox(height: 10),
           _buildPriceRow("Tổng cộng", totalCart, isTotal: true),
           SizedBox(height: Dimensions.height20),
           ElevatedButton(
@@ -54,7 +44,7 @@ class CartSummary extends StatelessWidget {
               ),
             ),
             child: Text(
-              "Thanh toán \$${totalCart.toStringAsFixed(2)}",
+              "Thanh toán ${_formatCurrency(totalCart)}",
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -79,7 +69,7 @@ class CartSummary extends StatelessWidget {
           ),
         ),
         Text(
-          "\$${amount.toStringAsFixed(2)}",
+          _formatCurrency(amount),
           style: TextStyle(
             fontSize: isTotal ? Dimensions.font18 : Dimensions.font14,
             fontWeight: FontWeight.bold,
@@ -88,5 +78,10 @@ class CartSummary extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// ✅ Hàm định dạng tiền VNĐ
+  String _formatCurrency(double amount) {
+    return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../favourite/favourite.dart';
+import 'package:intl/intl.dart';
+import '../favourite/favorite_page.dart';
 import '../../controllers/product/product_controller.dart';
 import '../../models/product/product_model.dart';
 import '../../utils/dimensions.dart';
@@ -119,45 +120,17 @@ class _FoodListPageState extends State<FoodListPage> {
                                     height: Dimensions.screenHeight * 0.15,
                                     width: double.infinity,
                                     fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Positioned(
-                                  top: Dimensions.height8,
-                                  right: Dimensions.width8,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      // Chuyển đến trang yêu thích
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => FavoritePage(
-                                              favoriteProducts:
-                                                  favoriteProducts),
-                                        ),
+                                    errorBuilder: (context, error, stackTrace) {
+                                      print("🚫 Lỗi ảnh: $error");
+                                      return Container(
+                                        height: Dimensions.screenHeight * 0.15,
+                                        width: double.infinity,
+                                        color: Colors.grey[200],
+                                        child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
                                       );
                                     },
-                                    child: Container(
-                                      padding:
-                                          EdgeInsets.all(Dimensions.height5),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black26,
-                                            blurRadius: 4,
-                                          )
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        isFavorite
-                                            ? Icons.favorite
-                                            : Icons.favorite_border,
-                                        color: Colors.red,
-                                        size: Dimensions.iconSize20,
-                                      ),
-                                    ),
-                                  ),
+                                  )
+                                  ,
                                 ),
                               ],
                             ),
@@ -181,7 +154,7 @@ class _FoodListPageState extends State<FoodListPage> {
                                   ),
                                   SizedBox(height: Dimensions.height5),
                                   Text(
-                                    '${food.gia.toInt()}đ',
+                                    "${NumberFormat("#,###", "vi_VN").format(food.gia)}₫",
                                     style: TextStyle(
                                       color: Colors.deepOrange,
                                       fontWeight: FontWeight.bold,

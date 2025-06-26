@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../controllers/user/login_controller.dart';
 import '../../utils/dimensions.dart';
 import '../register/register_screen.dart';
 import '../../widgets/bottom_navigation_bar.dart'; // MainNavigation
+import '../../models/user/user_token.dart';
 
 class LoginForm extends StatefulWidget {
   const LoginForm({super.key});
@@ -17,6 +19,20 @@ class _LoginFormState extends State<LoginForm> {
 
   bool _isLoading = false;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _clearOldSession();
+  }
+
+  Future<void> _clearOldSession() async {
+    print("🧹 [LoginPage] Đang xoá token và user cũ...");
+    await UserToken.clearToken();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user');
+    print("✅ Đã xoá sạch session cũ");
+  }
 
   void _handleLogin() async {
     final email = _emailController.text.trim();
@@ -38,7 +54,6 @@ class _LoginFormState extends State<LoginForm> {
     setState(() => _isLoading = false);
 
     if (result['success']) {
-      // ✅ Thông báo thành công
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Chào ${result['user']['ten']}!'),
@@ -46,10 +61,9 @@ class _LoginFormState extends State<LoginForm> {
         ),
       );
 
-      // ✅ Chuyển sang trang chính
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainNavigation()),
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+            (route) => false,
       );
     } else {
       setState(() {
@@ -57,6 +71,7 @@ class _LoginFormState extends State<LoginForm> {
       });
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

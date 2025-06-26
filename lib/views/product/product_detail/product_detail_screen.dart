@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../services/product/product_service.dart';
+import '../../../services/cart/cart_service.dart';
 import '../../../utils/dimensions.dart';
+import '../../../models/product/product_model.dart';
 import '../../cart/cart_page.dart';
+import '../../pay/payment.dart';
 import 'bottom_bar_actions.dart';
 import 'product_image_appbar.dart';
 import 'product_info_section.dart';
@@ -36,7 +39,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           : await ProductService.getAllProducts();
 
       setState(() {
-        // Loại bỏ chính sản phẩm hiện tại khỏi danh sách nếu trùng ID
         relatedProducts = result
             .where((item) => item.id != widget.product?['id'])
             .map((item) => item.toJson())
@@ -44,7 +46,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         isLoading = false;
       });
     } catch (e) {
-      print('Lỗi khi tải sản phẩm liên quan: $e');
+      print('❌ Lỗi khi tải sản phẩm liên quan: $e');
     }
   }
 
@@ -64,7 +66,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
-          ProductImageAppBar(product: widget.product,cartItemCount: 2,),
+          ProductImageAppBar(
+            product: {
+              ...?widget.product,
+              'id_san_pham': widget.product?['id'], // 👈 Thêm trường id_san_pham thủ công nếu cần
+            },
+            cartItemCount: 2,
+          ),
+
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(Dimensions.width20),
@@ -95,11 +104,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
       bottomNavigationBar: BottomBarActions(
         totalPrice: getTotalPrice(),
-        onAddToCart: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => CartPage()));
+        onAddToCart: () async {
+          try {
+            final product = ProductModel.fromJson(widget.product!);
+            await CartService.addToCart(product, quantity: quantity);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("✅ Đã thêm $quantity sản phẩm vào giỏ hàng")),
+            );
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CartPage()),
+            );
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("❌ Lỗi khi thêm vào giỏ hàng: $e")),
+            );
+          }
         },
         onBuyNow: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => CartPage()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => CheckoutPage()),
+          );
         },
       ),
     );

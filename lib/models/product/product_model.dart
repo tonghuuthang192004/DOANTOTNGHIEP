@@ -19,22 +19,17 @@ class ProductModel {
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
-      id: json['id'] ?? 0, // ✅ tránh null
-      ten: json['ten'] ?? json['ten_san_pham'] ?? 'Chưa có tên',
+      id: json['id'] ?? json['id_san_pham'] ?? 0,
+      ten: json['ten'] ?? json['ten_san_pham'] ?? 'Không có tên',
       moTa: json['mo_ta'] ?? '',
-      gia: (json['gia'] != null)
-          ? (json['gia'] is int
+      gia: (json['gia'] is int)
           ? (json['gia'] as int).toDouble()
-          : double.tryParse(json['gia'].toString()) ?? 0.0)
-          : 0.0,
+          : double.tryParse(json['gia'].toString()) ?? 0.0,
       hinhAnh: json['hinh_anh'] ?? '',
       danhGia: double.tryParse(json['danh_gia']?.toString() ?? '4.5') ?? 4.5,
-      danhMucId: json['danh_muc_id'] != null
-          ? (json['danh_muc_id'] as int)
-          : null,
+      danhMucId: json['danh_muc_id'] ?? json['id_danh_muc'] ?? 0,
     );
   }
-
 
   Map<String, dynamic> toJson() {
     return {

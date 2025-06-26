@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../api/api_constants.dart';
-import '../../models/user/user_token.dart'; // 👈 dùng class quản lý token
+import '../../models/user/user_token.dart';
 
 class LoginController {
   Future<Map<String, dynamic>> login(String email, String password) async {
@@ -14,28 +15,57 @@ class LoginController {
         body: jsonEncode({'email': email, 'mat_khau': password}),
       );
 
-      final data = jsonDecode(response.body);
+      print('🧾 Response from API: ${response.body}');
 
-      if (response.statusCode == 200) {
-        // ✅ Lưu token đúng cách
-        await UserToken.saveToken(data['token']);
+      final decoded = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && decoded['token'] != null) {
+        final prefs = await SharedPreferences.getInstance();
+
+        // 🧹 Xóa dữ liệu cũ
+        await prefs.remove('user');
+        await UserToken.clearToken();
+
+        // ✅ Lưu token
+        await UserToken.saveToken(decoded['token']);
+
+        final user = decoded['user'];
+        if (user != null) {
+          await prefs.setString('user', jsonEncode(user));
+
+          // ✅ Lưu userId an toàn từ key 'id_nguoi_dung'
+          final dynamic rawId = user['id_nguoi_dung'];
+          if (rawId != null) {
+            final int? userId = rawId is int ? rawId : int.tryParse(rawId.toString());
+            if (userId != null) {
+              await UserToken.saveUserId(userId);
+            } else {
+              print("⚠️ ID không hợp lệ: $rawId");
+            }
+          } else {
+            print("❌ Không tìm thấy 'id_nguoi_dung' trong user");
+          }
+
+          print("✅ [Login] Lưu user thành công: $user");
+        }
+
+        print("📦 Token mới: ${decoded['token']}");
 
         return {
           'success': true,
-          'token': data['token'],
-          'user': data['user'],
-          'message': data['message'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Đăng nhập thất bại',
+          'user': user,
+          'token': decoded['token'],
         };
       }
+
+      return {
+        'success': false,
+        'message': decoded['message'] ?? 'Đăng nhập thất bại',
+      };
     } catch (e) {
       return {
         'success': false,
-        'message': 'Lỗi kết nối máy chủ: $e',
+        'message': 'Lỗi kết nối: $e',
       };
     }
   }

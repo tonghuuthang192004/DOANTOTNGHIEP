@@ -17,14 +17,14 @@ class CartController extends ChangeNotifier {
   double get tax => subtotal * 0.08;
   double get total => subtotal + deliveryFee + tax;
 
-  /// Load giỏ hàng của người dùng
-  Future<void> loadCart(String userId) async {
+  /// 🚚 Load giỏ hàng của người dùng (userId được lấy từ session bên trong service)
+  Future<void> loadCart() async {
     isLoading = true;
     error = null;
     notifyListeners();
 
     try {
-      _cartItems = await CartService.fetchCart(userId);
+      _cartItems = await CartService.fetchCart();
     } catch (e) {
       error = "Không thể tải giỏ hàng: $e";
       _cartItems = [];
@@ -34,33 +34,46 @@ class CartController extends ChangeNotifier {
     }
   }
 
-  /// Thêm sản phẩm vào giỏ
-  Future<void> addProduct(String userId, ProductModel product) async {
+  /// ➕ Thêm sản phẩm vào giỏ
+  Future<void> addProduct(ProductModel product) async {
     try {
-      await CartService.addToCart(userId, product);
-      await loadCart(userId);
+      CartModel? existingItem;
+      try {
+        existingItem = _cartItems.firstWhere((item) => item.product.id == product.id);
+      } catch (e) {
+        existingItem = null;
+      }
+
+      if (existingItem != null) {
+        final newQuantity = existingItem.quantity + 1;
+        await CartService.updateQuantity(existingItem.id.toString(), newQuantity);
+      } else {
+        await CartService.addToCart(product);
+      }
+
+      await loadCart(); // Reload lại giỏ hàng
     } catch (e) {
       error = "Không thể thêm sản phẩm: $e";
       notifyListeners();
     }
   }
 
-  /// Cập nhật số lượng sản phẩm
-  Future<void> updateQuantity(String itemId, int quantity, String userId) async {
+  /// 🔁 Cập nhật số lượng sản phẩm
+  Future<void> updateQuantity(String itemId, int quantity) async {
     try {
       await CartService.updateQuantity(itemId, quantity);
-      await loadCart(userId);
+      await loadCart();
     } catch (e) {
       error = "Không thể cập nhật số lượng: $e";
       notifyListeners();
     }
   }
 
-  /// Xoá sản phẩm khỏi giỏ
-  Future<void> removeItem(String itemId, String userId) async {
+  /// ❌ Xoá sản phẩm khỏi giỏ
+  Future<void> removeItem(String itemId) async {
     try {
       await CartService.removeCartItem(itemId);
-      await loadCart(userId);
+      await loadCart();
     } catch (e) {
       error = "Không thể xoá sản phẩm: $e";
       notifyListeners();

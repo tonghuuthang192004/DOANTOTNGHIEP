@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../../utils/dimensions.dart';
 
 class ProductInfoSection extends StatelessWidget {
@@ -42,7 +43,7 @@ class ProductInfoSection extends StatelessWidget {
 
         /// Giá
         Text(
-          '${basePrice.toStringAsFixed(0)}đ',
+          '${NumberFormat("#,###", "vi_VN").format(basePrice)}đ',
           style: TextStyle(
             fontSize: Dimensions.font22,
             fontWeight: FontWeight.bold,
