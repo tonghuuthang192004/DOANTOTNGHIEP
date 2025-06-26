@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../Views/ favourite/favourite.dart';
-import '../Views/Cart/Cart.dart';
-import '../Views/Promotion/Promotion_screen.dart';
-import '../Views/home/home_screen.dart';
-import '../Views/profile/profile_screen.dart';
+import '../views/favourite/favourite.dart';
+import '../views/cart/cart_page.dart';
+import '../views/Promotion/Promotion_screen.dart';
+import '../views/home/home_screen.dart';
+import '../views/profile/profile_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);

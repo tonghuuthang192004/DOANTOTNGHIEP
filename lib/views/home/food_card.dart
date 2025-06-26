@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../ favourite/favourite.dart';
-import '../../models/home/product_model.dart';
+import '../../models/product/product_model.dart';
 import '../../utils/dimensions.dart';
 
 class FoodCard extends StatelessWidget {
@@ -18,6 +17,7 @@ class FoodCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        height: Dimensions.height280, // Giới hạn chiều cao toàn card
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Dimensions.radius20),
           color: Colors.white,
@@ -30,113 +30,75 @@ class FoodCard extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// --- Ảnh + Yêu thích ---
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(Dimensions.radius20),
-                  ),
-                  child: Image.network(
-                    food.hinhAnh,
-                    height: Dimensions.height100,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: Dimensions.height100,
-                      color: Colors.grey[200],
-                      child: Icon(Icons.broken_image, color: Colors.grey),
-                    ),
-                  ),
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(Dimensions.radius20),
+              ),
+              child: Image.network(
+                food.hinhAnh,
+                height: Dimensions.height100,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: Dimensions.height100,
+                  color: Colors.grey[200],
+                  child: Icon(Icons.broken_image, color: Colors.grey),
                 ),
-                Positioned(
-                  top: Dimensions.height8,
-                  right: Dimensions.width8,
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => FavoritePage(
-                            favoriteProducts: favoriteProducts,
+              ),
+            ),
+            Flexible(
+              fit: FlexFit.loose,
+              child: Padding(
+                padding: EdgeInsets.all(Dimensions.height10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, // ✅ sửa chỗ này
+                  children: [
+                    Text(
+                      food.ten,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: Dimensions.font16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height5),
+                    Text(
+                      "${food.gia.toInt()}₫",
+                      style: TextStyle(
+                        fontSize: Dimensions.font16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange[800],
+                      ),
+                    ),
+                    SizedBox(height: Dimensions.height5),
+                    Row(
+                      children: [
+                        Icon(Icons.star_rounded,
+                            color: Colors.amber[600],
+                            size: Dimensions.iconSize16),
+                        SizedBox(width: Dimensions.width5),
+                        Text(
+                          "${food.danhGia}",
+                          style: TextStyle(
+                            fontSize: Dimensions.font12,
+                            color: Colors.grey[600],
                           ),
                         ),
-                      );
-                    },
-                    child: Container(
-                      padding: EdgeInsets.all(Dimensions.height5),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.favorite_border,
-                        color: Colors.grey[600],
-                        size: Dimensions.iconSize16,
-                      ),
+                        SizedBox(width: Dimensions.width5),
+                        Text(
+                          "(120)",
+                          style: TextStyle(
+                            fontSize: Dimensions.font12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ),
-
-              ],
-            ),
-
-            /// --- Nội dung ---
-            Padding(
-              padding: EdgeInsets.all(Dimensions.height10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// Tên
-                  Text(
-                    food.ten,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: Dimensions.font16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: Dimensions.height5),
-
-                  /// Giá
-                  Text(
-                    "${food.gia.toInt()}₫",
-                    style: TextStyle(
-                      fontSize: Dimensions.font16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange[800],
-                    ),
-                  ),
-                  SizedBox(height: Dimensions.height5),
-
-                  /// Đánh giá
-                  Row(
-                    children: [
-                      Icon(Icons.star_rounded,
-                          color: Colors.amber[600],
-                          size: Dimensions.iconSize16),
-                      SizedBox(width: Dimensions.width5),
-                      Text(
-                        "${food.danhGia}",
-                        style: TextStyle(
-                          fontSize: Dimensions.font12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      SizedBox(width: Dimensions.width5),
-                      Text(
-                        "(120)", // Có thể sửa thành `food.reviewCount` nếu có
-                        style: TextStyle(
-                          fontSize: Dimensions.font12,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ),
           ],

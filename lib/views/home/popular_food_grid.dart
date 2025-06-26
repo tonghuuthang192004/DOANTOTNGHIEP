@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../models/home/product_model.dart';
+import '../../models/product/product_model.dart';
 import '../../utils/dimensions.dart';
-import '../product/product_detail_screen.dart';
+import '../product/product_detail/product_detail_screen.dart';
 import 'food_card.dart';
 
 class PopularFoodGrid extends StatelessWidget {
@@ -23,7 +23,9 @@ class PopularFoodGrid extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: Dimensions.height20,
         crossAxisSpacing: Dimensions.width15,
-        childAspectRatio: 0.70,
+
+        /// 👇 Điều chỉnh tỉ lệ khung item để tránh lỗi tràn
+        childAspectRatio: 0.65,
       ),
       itemBuilder: (context, index) {
         final food = foods[index];
@@ -33,7 +35,7 @@ class PopularFoodGrid extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ProductDetailScreen(product: food.toJson(),),
+                builder: (_) => ProductDetailScreen(product: food.toJson()),
               ),
             );
           },

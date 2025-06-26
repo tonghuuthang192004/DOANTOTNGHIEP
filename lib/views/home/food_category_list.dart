@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/home/category_model.dart';
+import '../../models/category/category_model.dart';
 import '../../utils/dimensions.dart';
 
 class FoodCategoryList extends StatefulWidget {

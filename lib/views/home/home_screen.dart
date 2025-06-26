@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:frontendtn1/views/home/food_category_list.dart';
 import 'package:frontendtn1/views/home/popular_food_grid.dart';
-import '../../controllers/category_controller.dart';
-import '../../controllers/product_controller.dart';
-import '../../models/home/category_model.dart';
-import '../../models/home/product_model.dart';
+import '../../controllers/category/category_controller.dart';
+import '../../controllers/product/product_controller.dart';
+import '../../models/category/category_model.dart';
+import '../../models/product/product_model.dart';
 import '../../utils/dimensions.dart';
 import '../product/list_food.dart';
 import 'banner_promotion.dart';
@@ -138,8 +138,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                 child: hotProducts.isEmpty
-                    ? Center(child: CircularProgressIndicator())
-                    : PopularFoodGrid(foods: hotProducts),
+                    ? SizedBox(
+                    height: Dimensions.height100,
+                    child: Center(child: CircularProgressIndicator()))
+                    : Padding(
+                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
+                  child: PopularFoodGrid(foods: hotProducts),
+                ),
+
               ),
               SizedBox(height: Dimensions.height30),
             ],

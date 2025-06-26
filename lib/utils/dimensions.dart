@@ -29,8 +29,13 @@ class Dimensions {
   static late double height45;
 
   static late double height50;
-
+  static late double height60;
   static late double height100;
+  static late double height200;
+  static late double height220;
+  static late double height250;
+  static late double height280;
+  static late double height300;
 
   static late double width5;
 
@@ -117,7 +122,13 @@ class Dimensions {
     height40 = screenHeight / 21.25;
     height45 = screenHeight / 18.89;
     height50 = screenHeight / 17;
+    height60 = screenHeight / 14.17; // ~60px
     height100 = screenHeight / 8.5;
+    height200 = screenHeight / 4.25; // ~200px
+    height220 = screenHeight / 3.86; // ~220px
+    height250 = screenHeight / 3.4; // ~250px
+    height280 = screenHeight / 3.04; // ~280px
+    height300 = screenHeight / 2.83; // ~300px
 
     width5 = screenWidth / 85;
     width8 = screenWidth / 53.125;
