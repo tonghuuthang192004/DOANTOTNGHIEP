@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../utils/dimensions.dart';
 import 'register_header.dart';
 import 'register_form.dart';
-import 'social_login.dart';
+
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});

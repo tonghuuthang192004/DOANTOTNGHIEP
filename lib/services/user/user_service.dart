@@ -1,3 +1,4 @@
+
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../api/api_constants.dart';
 import '../../models/user/user_model.dart';
@@ -7,7 +8,7 @@ import '../../models/user/user_token.dart';
 
 class UserService {
   Future<Map<String, dynamic>> register(UserModel user) async {
-    final url = Uri.parse('${API.baseUrl}/users/dang-ky');
+    final url = Uri.parse(API.register);
 
     try {
       final response = await http.post(
@@ -31,13 +32,17 @@ class UserService {
   }
 
   Future<Map<String, dynamic>> verifyEmail(String email, String code) async {
-    final url = Uri.parse('${API.baseUrl}/users/xac-minh-email');
+    final url = Uri.parse(API.verifyEmail);
 
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'code': code}),
+          body: jsonEncode({
+            'email': email,
+            'ma_xac_minh': code, // 👈 sửa key
+          }),
+
       );
 
       return {
@@ -59,7 +64,7 @@ class UserService {
     await UserToken.clearToken();  // <-- Xoá token cũ
 
     // 🔐 BƯỚC 2: Gọi API đăng nhập
-    final url = Uri.parse('${API.baseUrl}/users/dang-nhap');
+    final url = Uri.parse(API.login);
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -165,7 +170,7 @@ class UserService {
   }
 
   Future<Map<String, dynamic>> getProfile() async {
-    final url = Uri.parse('${API.baseUrl}/users/profile');
+    final url = Uri.parse(API.getProfile);
     final token = await UserToken.getToken();
 
     print("🚀 Token đang dùng: $token");
@@ -194,6 +199,60 @@ class UserService {
       };
     }
   }
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final url = Uri.parse(API.forgotPassword);
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      final decoded = jsonDecode(response.body);
+
+      return {
+        'statusCode': response.statusCode,
+        'body': decoded,
+      };
+    } catch (e) {
+      return {
+        'statusCode': 500,
+        'body': {'message': 'Lỗi gửi email quên mật khẩu', 'error': e.toString()},
+      };
+    }
+  }
+  Future<Map<String, dynamic>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse(API.resetPassword);
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': token,
+          'newPassword': newPassword,
+        }),
+      );
+
+      final decoded = jsonDecode(response.body);
+
+      return {
+        'statusCode': response.statusCode,
+        'body': decoded,
+      };
+    } catch (e) {
+      return {
+        'statusCode': 500,
+        'body': {'message': 'Lỗi đặt lại mật khẩu', 'error': e.toString()},
+      };
+    }
+  }
+
+
 
   Future<void> logout() async {
     await UserToken.clearToken();
@@ -201,4 +260,5 @@ class UserService {
     await prefs.remove('user');
     print("🧹 [Logout] Đã xoá user khỏi SharedPreferences");
   }
+
 }

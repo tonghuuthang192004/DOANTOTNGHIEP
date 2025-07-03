@@ -14,6 +14,7 @@ class AddressManagementPage extends StatefulWidget {
 class _AddressManagementPageState extends State<AddressManagementPage> {
   List<AddressModel> addresses = [];
   int? userId;
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -22,29 +23,28 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
   }
 
   Future<void> _loadUserIdAndAddresses() async {
-    final fetchedUserIdStr = await UserSession.getUserId();
+    try {
+      final fetchedUserIdStr = await UserSession.getUserId();
+      if (fetchedUserIdStr == null) {
+        _showSnackBar('Không tìm thấy userId', isError: true);
+        return;
+      }
 
-    if (fetchedUserIdStr == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Không tìm thấy userId"), backgroundColor: Colors.red),
-      );
-      return;
-    }
+      final parsedUserId = int.tryParse(fetchedUserIdStr.toString());
+      if (parsedUserId == null) {
+        _showSnackBar('ID người dùng không hợp lệ', isError: true);
+        return;
+      }
 
-    final parsedUserId = int.tryParse(fetchedUserIdStr.toString());
-
-    if (parsedUserId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("ID người dùng không hợp lệ"), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    setState(() {
       userId = parsedUserId;
-    });
-
-    await _loadAddresses();
+      await _loadAddresses();
+    } catch (e) {
+      _showSnackBar('Lỗi tải dữ liệu: $e', isError: true);
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadAddresses() async {
@@ -56,10 +56,17 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
         addresses = fetched;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi tải địa chỉ: $e'), backgroundColor: Colors.red),
-      );
+      _showSnackBar('Lỗi tải danh sách địa chỉ: $e', isError: true);
     }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
   }
 
   @override
@@ -73,12 +80,18 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: userId == null
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-        padding: EdgeInsets.all(Dimensions.height20),
-        itemCount: addresses.length,
-        itemBuilder: (context, index) => _buildAddressCard(addresses[index], index),
+          : addresses.isEmpty
+          ? const Center(child: Text('Chưa có địa chỉ nào'))
+          : RefreshIndicator(
+        onRefresh: _loadAddresses,
+        child: ListView.builder(
+          padding: EdgeInsets.all(Dimensions.height20),
+          itemCount: addresses.length,
+          itemBuilder: (context, index) =>
+              _buildAddressCard(addresses[index], index),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddAddressDialog,
@@ -154,9 +167,10 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
     return PopupMenuButton<String>(
       onSelected: (value) => _handleAddressAction(value, address, index),
       itemBuilder: (context) => [
-        PopupMenuItem(value: 'edit', child: Text('Sửa')),
-        if (!address.isDefault) PopupMenuItem(value: 'default', child: Text('Đặt mặc định')),
-        PopupMenuItem(value: 'delete', child: Text('Xóa')),
+        PopupMenuItem(value: 'edit', child: const Text('Sửa')),
+        if (!address.isDefault)
+          PopupMenuItem(value: 'default', child: const Text('Đặt mặc định')),
+        PopupMenuItem(value: 'delete', child: const Text('Xoá')),
       ],
     );
   }
@@ -171,17 +185,17 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
           break;
         case 'default':
           await AddressService.setDefaultAddress(address.id, userId!);
+          _showSnackBar('Đặt mặc định thành công');
           await _loadAddresses();
           break;
         case 'delete':
-          await AddressService.deleteAddress(address.id, userId!);
+          await AddressService.deleteAddress(address.id);
+          _showSnackBar('Xoá địa chỉ thành công');
           await _loadAddresses();
           break;
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi thao tác địa chỉ: $e'), backgroundColor: Colors.red),
-      );
+      _showSnackBar('Lỗi thao tác: $e', isError: true);
     }
   }
 
@@ -200,7 +214,8 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.radius15)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Dimensions.radius15)),
           title: Text(address == null ? 'Thêm địa chỉ mới' : 'Sửa địa chỉ'),
           content: SingleChildScrollView(
             child: Form(
@@ -217,7 +232,7 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
                     title: const Text('Đặt làm địa chỉ mặc định'),
                     value: isDefault,
                     onChanged: (value) => setDialogState(() => isDefault = value ?? false),
-                  )
+                  ),
                 ],
               ),
             ),
@@ -240,19 +255,19 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
                 try {
                   if (address == null) {
                     await AddressService.createAddress(newAddress);
+                    _showSnackBar('Thêm địa chỉ thành công');
                   } else {
                     await AddressService.updateAddress(newAddress);
+                    _showSnackBar('Cập nhật địa chỉ thành công');
                   }
                   Navigator.pop(context);
                   await _loadAddresses();
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Lỗi lưu địa chỉ: $e'), backgroundColor: Colors.red),
-                  );
+                  _showSnackBar('Lỗi lưu địa chỉ: $e', isError: true);
                 }
               },
               child: Text(address == null ? 'Thêm' : 'Cập nhật'),
-            )
+            ),
           ],
         ),
       ),

@@ -28,10 +28,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
-    fetchRelatedProducts();
+    getRelatedProducts();
   }
 
-  Future<void> fetchRelatedProducts() async {
+  Future<void> getRelatedProducts() async {
     try {
       final categoryId = widget.product?['danh_muc_id'];
       final result = categoryId != null

@@ -1,6 +1,7 @@
 // 📁 lib/pages/cart/cart_empty_widget.dart
 import 'package:flutter/material.dart';
 import '../../utils/dimensions.dart';
+import '../../widgets/bottom_navigation_bar.dart';
 
 class CartEmptyState extends StatelessWidget {
   const CartEmptyState({super.key});
@@ -31,7 +32,12 @@ class CartEmptyState extends StatelessWidget {
             ),
             SizedBox(height: Dimensions.height20),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const MainNavigation()),
+                      (route) => false, // 👈 Xoá toàn bộ stack trước đó
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 foregroundColor: Colors.white,
@@ -45,6 +51,7 @@ class CartEmptyState extends StatelessWidget {
               ),
               child: const Text("Quay lại menu"),
             ),
+
           ],
         ),
       ),

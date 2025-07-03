@@ -6,7 +6,7 @@ import '../../models/user/user_token.dart';
 
 class LoginController {
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final url = Uri.parse('${API.baseUrl}/users/dang-nhap');
+    final url = Uri.parse(API.login);
 
     try {
       final response = await http.post(

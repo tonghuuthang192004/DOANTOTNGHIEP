@@ -10,6 +10,13 @@ class UpdateProfileController {
     final url = Uri.parse(API.getProfile);
     final token = await UserToken.getToken();
 
+    print('🚀 Token đang dùng: $token');
+
+    if (token == null) {
+      print('⚠️ Token null, cần đăng nhập lại');
+      return null;
+    }
+
     try {
       final response = await http.get(
         url,
@@ -19,21 +26,29 @@ class UpdateProfileController {
       );
 
       final data = jsonDecode(response.body);
+      print('📦 [getProfile] Response: $data');
+
       if (response.statusCode == 200 && data['data'] != null) {
         return UserModel.fromJson(data['data']);
+      } else if (response.statusCode == 200 && data['user'] != null) {
+        return UserModel.fromJson(data['user']);
+      } else {
+        print('❌ Không tìm thấy data trong response');
       }
     } catch (e) {
-      print('Lỗi lấy thông tin người dùng: $e');
+      print('❌ Lỗi lấy thông tin người dùng: $e');
     }
 
     return null;
   }
+
 
   // ✅ Cập nhật thông tin và trả về cả trước & sau
   Future<Map<String, dynamic>> updateProfile({
     required String ten,
     required String soDienThoai,
     required String gioiTinh,
+    String? ngaySinh, // 👈 thêm ngày sinh
     String? avatar,
   }) async {
     final token = await UserToken.getToken();
@@ -45,18 +60,21 @@ class UpdateProfileController {
       final currentUser = await getCurrentUserProfile();
 
       // 🔹 B2: Gửi yêu cầu cập nhật thông tin
+      final updateBody = {
+        'ten': ten,
+        'so_dien_thoai': soDienThoai,
+        'gioi_tinh': gioiTinh,
+        if (ngaySinh != null) 'ngay_sinh': ngaySinh, // 👈 thêm vào body
+        if (avatar != null) 'avatar': avatar,
+      };
+
       final updateRes = await http.put(
         updateUrl,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'ten': ten,
-          'so_dien_thoai': soDienThoai,
-          'gioi_tinh': gioiTinh,
-          if (avatar != null) 'avatar': avatar,
-        }),
+        body: jsonEncode(updateBody),
       );
 
       final updateData = jsonDecode(updateRes.body);
@@ -97,3 +115,7 @@ class UpdateProfileController {
     }
   }
 }
+
+
+
+

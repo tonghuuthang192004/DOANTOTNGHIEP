@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../controllers/user/login_controller.dart';
 import '../../utils/dimensions.dart';
+import '../forgot_password/forgot_password.dart';
 import '../register/register_screen.dart';
 import '../../widgets/bottom_navigation_bar.dart'; // MainNavigation
 import '../../models/user/user_token.dart';
@@ -96,10 +97,19 @@ class _LoginFormState extends State<LoginForm> {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: () {},
-              child: const Text('Quên mật khẩu?', style: TextStyle(color: Colors.deepOrange)),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
+                );
+              },
+              child: const Text(
+                'Quên mật khẩu?',
+                style: TextStyle(color: Colors.deepOrange),
+              ),
             ),
           ),
+
           SizedBox(height: Dimensions.height20),
           SizedBox(
             width: double.infinity,

@@ -39,11 +39,19 @@ class FavoriteService {
       body: jsonEncode({'userId': userId, 'productId': productId}),
     );
 
-    return response.statusCode == 200;
+    final decoded = jsonDecode(response.body);
+    print("📦 AddFavorite response: $decoded");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return decoded['success'] == true;
+    } else {
+      throw Exception(decoded['message'] ?? "Thêm yêu thích thất bại");
+    }
   }
 
+
   static Future<bool> removeFavorite(int userId, int productId) async {
-    final uri = Uri.parse(API.removeFavourite(userId, productId));
+    final uri = Uri.parse(API.removeFavourite(productId, userId));
     final response = await http.delete(uri);
     return response.statusCode == 200;
   }

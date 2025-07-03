@@ -1,27 +1,38 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:frontendtn1/views/forgot_password/reset_password.dart';
 import 'package:http/http.dart' as http;
 import '../../api/api_constants.dart';
+import '../login/login_screen.dart';
 
-class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({super.key});
+class ResetPasswordPage extends StatefulWidget {
+  final String email;
+
+  const ResetPasswordPage({super.key, required this.email});
 
   @override
-  State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
+  State<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
-class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final TextEditingController _emailController = TextEditingController();
+class _ResetPasswordPageState extends State<ResetPasswordPage> {
+  final TextEditingController _codeController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
   bool _isLoading = false;
   String? _message;
 
-  Future<void> _sendForgotPasswordEmail() async {
-    final email = _emailController.text.trim();
+  Future<void> _resetPassword() async {
+    final code = _codeController.text.trim();
+    final newPassword = _newPasswordController.text.trim();
 
-    if (email.isEmpty) {
+    if (code.isEmpty || newPassword.isEmpty) {
       setState(() {
-        _message = '📧 Vui lòng nhập email.';
+        _message = '⚠️ Vui lòng nhập mã và mật khẩu mới.';
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setState(() {
+        _message = '⚠️ Mật khẩu phải từ 8 ký tự trở lên.';
       });
       return;
     }
@@ -31,30 +42,34 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       _message = null;
     });
 
-    final url = Uri.parse(API.forgotPassword);
+    final url = Uri.parse(API.resetPassword);
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
+        body: jsonEncode({
+          'email': widget.email,
+          'ma_xac_minh': code,
+          'newPassword': newPassword,
+        }),
       );
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         setState(() {
-          _message = data['message'];
+          _message = '✅ Đổi mật khẩu thành công! Đang chuyển về đăng nhập...';
         });
 
-        // 👉 Điều hướng đến ResetPasswordPage
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResetPasswordPage(email: email),
-          ),
-        );
+        // ⏳ Delay 2s rồi quay về LoginScreen
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+          );
+        });
       } else {
         setState(() {
-          _message = data['error'] ?? '❌ Gửi email thất bại.';
+          _message = data['error'] ?? '❌ Đổi mật khẩu thất bại.';
         });
       }
     } catch (e) {
@@ -77,7 +92,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF2193b0), Color(0xFF6dd5ed)],
+                colors: [Color(0xFF36D1DC), Color(0xFF5B86E5)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -96,23 +111,32 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Text(
-                        'Quên mật khẩu?',
-                        style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                        'Đặt lại mật khẩu',
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.deepOrange),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),
                       const Text(
-                        'Nhập email để nhận mã đặt lại mật khẩu.',
+                        'Nhập mã xác minh đã gửi đến email và mật khẩu mới:',
                         style: TextStyle(fontSize: 16, color: Colors.black87),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 25),
                       TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
+                        controller: _codeController,
                         decoration: InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: const Icon(Icons.email, color: Colors.deepOrange),
+                          labelText: 'Mã xác minh',
+                          prefixIcon: const Icon(Icons.verified_user, color: Colors.deepOrange),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                        ),
+                      ),
+                      const SizedBox(height: 15),
+                      TextField(
+                        controller: _newPasswordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          labelText: 'Mật khẩu mới',
+                          prefixIcon: const Icon(Icons.lock, color: Colors.deepOrange),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                         ),
                       ),
@@ -123,10 +147,10 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         ),
-                        onPressed: _sendForgotPasswordEmail,
-                        icon: const Icon(Icons.send),
+                        onPressed: _resetPassword,
+                        icon: const Icon(Icons.lock_reset),
                         label: const Text(
-                          'Gửi mã xác minh',
+                          'Đặt lại mật khẩu',
                           style: TextStyle(fontSize: 16),
                         ),
                       ),

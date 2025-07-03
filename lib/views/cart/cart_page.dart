@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-
 import '../../models/cart/cart_model.dart';
 import '../../models/product/product_model.dart';
 import '../../services/cart/cart_service.dart';
 import '../../utils/dimensions.dart';
-
 import '../pay/payment.dart';
 import 'cart_empty_widget.dart';
 import 'cart_header_widget.dart';
@@ -22,15 +20,19 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  List<CartModel> carts = [];
-
+  List<CartModel> cartItems = [];
   bool isLoading = false;
   String? error;
+
+  double get subtotal => cartItems.fold(
+      0.0, (sum, item) => sum + item.product.gia * item.quantity);
+  double get deliveryFee => 0.0;
+  double get tax => subtotal * 0.0;
+  double get total => subtotal + deliveryFee + tax;
 
   @override
   void initState() {
     super.initState();
-
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -50,47 +52,55 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
     });
     try {
       final items = await CartService.fetchCart();
-      setState(() => carts = items);
+      setState(() => cartItems = items);
     } catch (e) {
-      setState(() => error = 'Lỗi kết nối hoặc máy chủ không phản hồi.\nChi tiết: ${e.toString()}');
+      setState(() => error = "❌ Không thể tải giỏ hàng: $e");
     } finally {
       setState(() => isLoading = false);
     }
   }
 
-  void _add(ProductModel product) async {
+  Future<void> _changeQuantity(CartModel cart, int newQuantity) async {
     try {
-      await CartService.addToCart(product);
-      _loadCart();
+      if (newQuantity <= 0) {
+        await _remove(cart);
+      } else {
+        await CartService.updateQuantity(
+            cart.product.id.toString(), newQuantity);
+        await _loadCart();
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi thêm vào giỏ: $e')),
-      );
+      _showError('Lỗi cập nhật số lượng: $e');
     }
   }
 
-  void _reduce(CartModel cart) async {
-    if (cart.quantity > 1) {
-      await CartService.updateQuantity(cart.id.toString(), cart.quantity - 1);
-      _loadCart();
+  Future<void> _remove(CartModel cart) async {
+    try {
+      await CartService.removeCartItem(cart.product.id.toString());
+      await _loadCart();
+    } catch (e) {
+      _showError('Lỗi xoá sản phẩm: $e');
     }
   }
 
-  void _remove(CartModel cart) async {
-    await CartService.removeCartItem(cart.id.toString());
-    _loadCart();
+  Future<void> _clearCart() async {
+    setState(() => isLoading = true);
+    try {
+      await CartService.clearCart();
+      await _loadCart();
+    } catch (e) {
+      _showError('Lỗi xoá toàn bộ giỏ hàng: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
-  double get subtotal =>
-      carts.fold(0, (sum, item) {
-        final price = item.product.gia;
-        final quantity = item.quantity;
-        final validPrice = price > 0 ? price : 0;
-        return sum + validPrice * quantity;
-      });
-
-
-  double get total => subtotal < 0 ? 0 : subtotal;
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 
   @override
   void dispose() {
@@ -101,7 +111,6 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     Dimensions.init(context);
-
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: FadeTransition(
@@ -116,9 +125,10 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               children: [
                 const Icon(Icons.error, color: Colors.red, size: 60),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Không thể tải giỏ hàng 😢',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -139,67 +149,61 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
               : Column(
             children: [
               CartHeader(
-                itemCount: carts.length,
+                itemCount: cartItems.length,
                 onClearAll: () async {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text('Xác nhận'),
-                      content: const Text('Bạn có chắc muốn xoá toàn bộ giỏ hàng?'),
+                      content: const Text(
+                          'Bạn có chắc muốn xoá toàn bộ giỏ hàng?'),
                       actions: [
                         TextButton(
-                            onPressed: () => Navigator.pop(context, false),
+                            onPressed: () =>
+                                Navigator.pop(context, false),
                             child: const Text('Huỷ')),
                         ElevatedButton(
-                            onPressed: () => Navigator.pop(context, true),
+                            onPressed: () =>
+                                Navigator.pop(context, true),
                             child: const Text('Xoá')),
                       ],
                     ),
                   );
-
                   if (confirmed == true) {
-                    setState(() => isLoading = true);
-                    try {
-                      await CartService.clearCart();
-                      await _loadCart();
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Lỗi khi xoá giỏ hàng: $e')),
-                      );
-                    } finally {
-                      setState(() => isLoading = false);
-                    }
+                    await _clearCart();
                   }
                 },
               ),
               SizedBox(height: Dimensions.height20),
               Expanded(
-                child: carts.isEmpty
+                child: cartItems.isEmpty
                     ? const CartEmptyState()
                     : ListView.builder(
-                  padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
-                  itemCount: carts.length,
+                  padding: EdgeInsets.symmetric(
+                      horizontal: Dimensions.width20),
+                  itemCount: cartItems.length,
                   itemBuilder: (context, index) {
-                    final cartItem = carts[index];
+                    final cartItem = cartItems[index];
                     return CartItem(
-                      context: context,
                       cart: cartItem,
-                      onAdd: () => _add(cartItem.product),
-                      onReduce: () => _reduce(cartItem),
+                      onAdd: () => _changeQuantity(
+                          cartItem, cartItem.quantity + 1),
+                      onReduce: () => _changeQuantity(
+                          cartItem, cartItem.quantity - 1),
                       onRemove: () => _remove(cartItem),
                     );
                   },
                 ),
               ),
-              if (carts.isNotEmpty)
+              if (cartItems.isNotEmpty)
                 CartSummary(
                   totalCart: total,
                   onCheckout: () {
-                    // TODO: Điều hướng đến màn hình thanh toán
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const CheckoutPage()),
-                    );
+                      MaterialPageRoute(
+                          builder: (context) => const CheckoutPage()),
+                    ).then((_) => _loadCart()); // 🔄 Reload sau khi checkout
                   },
                 ),
             ],

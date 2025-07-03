@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../services/favourite/favorite_service.dart';
-import '../../favourite/favorite_page.dart';
 import '../../../utils/dimensions.dart';
 
 class ProductImageAppBar extends StatelessWidget {

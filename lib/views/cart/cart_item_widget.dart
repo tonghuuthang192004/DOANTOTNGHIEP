@@ -4,7 +4,6 @@ import '../../utils/dimensions.dart';
 import 'package:intl/intl.dart';
 
 class CartItem extends StatelessWidget {
-  final BuildContext context; // 👈 Truyền context vào
   final CartModel cart;
   final VoidCallback onAdd;
   final VoidCallback onReduce;
@@ -12,12 +11,12 @@ class CartItem extends StatelessWidget {
 
   const CartItem({
     super.key,
-    required this.context,
     required this.cart,
     required this.onAdd,
     required this.onReduce,
     required this.onRemove,
   });
+
   String formatCurrency(double amount) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
   }
@@ -77,7 +76,6 @@ class CartItem extends StatelessWidget {
                     formatCurrency(cart.product.gia),
                     style: const TextStyle(color: Colors.orange),
                   ),
-
                   SizedBox(height: Dimensions.height10),
                   Row(
                     children: [
@@ -91,7 +89,7 @@ class CartItem extends StatelessWidget {
                       InkWell(
                         onTap: () async {
                           final confirm = await showDialog<bool>(
-                            context: this.context,
+                            context: context,
                             builder: (context) => AlertDialog(
                               title: const Text('Xác nhận xoá'),
                               content: const Text('Bạn có chắc muốn xoá sản phẩm này khỏi giỏ hàng?'),
