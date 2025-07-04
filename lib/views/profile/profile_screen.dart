@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../OrderHistoryPage/OrderHistoryPage_Screen.dart';
+
+
+import '../change_address/change_address.dart';
+import '../change_password/change_password.dart';
+import '../login/login_screen.dart';
+
+import '../../utils/dimensions.dart';
+import '../order_history_page/orderhistorypage_screen.dart';
+import '../update_information/update_information.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
-  void _onTap(BuildContext context, String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Bạn đã chọn: $action'),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+  // 🔐 Hàm đăng xuất
+  void _logout(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('token');
+    await prefs.remove('user');
+
+    // 🔁 Chuyển về màn Login và xoá history
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
     );
   }
+
+  // Điều hướng sang trang con
   void _navigateTo(BuildContext context, Widget page) {
     Navigator.push(
       context,
@@ -30,14 +37,14 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Dimensions.init(context); // ⚙️ Tính toán kích thước theo màn hình
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
         slivers: [
-          // Custom App Bar với gradient
           SliverAppBar(
             expandedHeight: 120,
-            floating: false,
             pinned: true,
             flexibleSpace: FlexibleSpaceBar(
               title: const Text(
@@ -54,99 +61,20 @@ class ProfilePage extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      Colors.orange,
-                      Colors.red,
-                    ],
+                    colors: [Colors.orange, Colors.red],
                   ),
                 ),
               ),
             ),
           ),
-
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  // Profile Card với animation và gradient
-                  // Container(
-                  //   padding: const EdgeInsets.all(24),
-                  //   decoration: BoxDecoration(
-                  //     gradient: const LinearGradient(
-                  //       begin: Alignment.topLeft,
-                  //       end: Alignment.bottomRight,
-                  //       colors: [Colors.white, Color(0xFFFFF8F5)],
-                  //     ),
-                  //     borderRadius: BorderRadius.circular(24),
-                  //     boxShadow: [
-                  //       BoxShadow(
-                  //         color: Colors.orange.withOpacity(0.1),
-                  //         blurRadius: 20,
-                  //         offset: const Offset(0, 8),
-                  //         spreadRadius: 2,
-                  //       ),
-                  //     ],
-                  //   ),
-                  //   child: Column(
-                  //     children: [
-                  //       // Avatar với border gradient
-                  //       // Container(
-                  //       //   padding: const EdgeInsets.all(4),
-                  //       //   decoration: BoxDecoration(
-                  //       //     shape: BoxShape.circle,
-                  //       //     gradient: const LinearGradient(
-                  //       //       colors: [Color(0xFFFF8A65), Color(0xFFFF5722)],
-                  //       //     ),
-                  //       //   ),
-                  //       //   child: Container(
-                  //       //     padding: const EdgeInsets.all(3),
-                  //       //     decoration: const BoxDecoration(
-                  //       //       color: Colors.white,
-                  //       //       shape: BoxShape.circle,
-                  //       //     ),
-                  //       //     child: const CircleAvatar(
-                  //       //       radius: 45,
-                  //       //       backgroundImage: AssetImage('images/user_avatar.png'),
-                  //       //       backgroundColor: Color(0xFFF5F5F5),
-                  //       //     ),
-                  //       //   ),
-                  //       // ),
-                  //       const SizedBox(height: 16),
-                  //       // const Text(
-                  //       //   'Nguyễn Văn A',
-                  //       //   style: TextStyle(
-                  //       //     fontWeight: FontWeight.bold,
-                  //       //     fontSize: 24,
-                  //       //     color: Color(0xFF2D3748),
-                  //       //   ),
-                  //       // ),
-                  //       // const SizedBox(height: 8),
-                  //       // Container(
-                  //       //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  //       //   decoration: BoxDecoration(
-                  //       //     color: Colors.orange.withOpacity(0.1),
-                  //       //     borderRadius: BorderRadius.circular(20),
-                  //       //   ),
-                  //       //   child: Text(
-                  //       //     'nguyenvana@gmail.com',
-                  //       //     style: TextStyle(
-                  //       //       color: Colors.orange[700],
-                  //       //       fontSize: 14,
-                  //       //       fontWeight: FontWeight.w500,
-                  //       //     ),
-                  //       //   ),
-                  //       // ),
-                  //       const SizedBox(height: 16),
-                  //       // Status badge
-                  //       // ss,
-                  //     ],
-                  //   ),
-                  // ),
-
                   const SizedBox(height: 30),
 
-                  // Menu sections
+                  // 🧾 Quản lý tài khoản
                   _buildMenuSection(
                     title: 'Quản lý tài khoản',
                     items: [
@@ -166,9 +94,9 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
 
+                  // 🔒 Bảo mật
                   _buildMenuSection(
                     title: 'Bảo mật',
                     items: [
@@ -188,79 +116,10 @@ class ProfilePage extends StatelessWidget {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 20),
 
-                  // Logout button
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withOpacity(0.2),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => _onTap(context, 'Đăng xuất'),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.red[100],
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.logout_rounded,
-                                  color: Colors.red[600],
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Đăng xuất',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.red[700],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Thoát khỏi tài khoản',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.red[500],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                Icons.arrow_forward_ios_rounded,
-                                size: 16,
-                                color: Colors.red[400],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  // 🚪 Đăng xuất
+                  _buildLogoutButton(context),
 
                   const SizedBox(height: 40),
                 ],
@@ -326,11 +185,7 @@ class ProfilePage extends StatelessWidget {
                   color: item.color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  item.icon,
-                  color: item.color,
-                  size: 24,
-                ),
+                child: Icon(item.icon, color: item.color, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -348,20 +203,77 @@ class ProfilePage extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       item.subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 16,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey[400]),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => _logout(context),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.logout_rounded, color: Colors.red.shade600),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Đăng xuất',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Thoát khỏi tài khoản',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.red.shade400),
+              ],
+            ),
           ),
         ),
       ),

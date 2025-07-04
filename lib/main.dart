@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-
-
-import 'views/product/product_detail_screen.dart';
-import 'views/welcome/Welcome_Screen.dart';
+import 'package:frontendtn1/views/login/login_screen.dart';
 
 void main() {
-  runApp(MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -14,12 +12,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: WelcomeScreen()
+      title: 'FastFood App',
+      debugShowCheckedModeBanner: false,
+      home: const LoginScreen(), // ⛔ Luôn bắt đầu ở màn hình đăng nhập
     );
   }
 }
-
-
-
-
