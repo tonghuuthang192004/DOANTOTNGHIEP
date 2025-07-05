@@ -2,12 +2,10 @@ class DiscountModel {
   final int id;
   final String ma;             // Mã giảm giá
   final String ten;            // Tên chương trình
-  final String loai;           // 'money' hoặc 'percent'
-  final int giaTri;            // Giá trị giảm
-  final int dieuKien;          // Điều kiện áp dụng
+  final String loai;           // 'tien_mat' hoặc 'phan_tram'
+  final double giaTri;         // Giá trị giảm
   final DateTime batDau;       // Ngày bắt đầu
   final DateTime ketThuc;      // Ngày kết thúc
-  final int soLuong;           // Tổng số lượng
   final int soLuongConLai;     // Số lượng còn lại
 
   DiscountModel({
@@ -16,10 +14,8 @@ class DiscountModel {
     required this.ten,
     required this.loai,
     required this.giaTri,
-    required this.dieuKien,
     required this.batDau,
     required this.ketThuc,
-    required this.soLuong,
     required this.soLuongConLai,
   });
 
@@ -29,12 +25,10 @@ class DiscountModel {
       ma: json['ma_giam_gia'],
       ten: json['ten'],
       loai: json['loai'],
-      giaTri: json['gia_tri'],
-      dieuKien: int.tryParse(json['dieu_kien'].toString()) ?? 0,
+      giaTri: double.tryParse(json['gia_tri'].toString()) ?? 0,
       batDau: DateTime.parse(json['ngay_bat_dau']),
       ketThuc: DateTime.parse(json['ngay_ket_thuc']),
-      soLuong: json['so_luong'],
-      soLuongConLai: json['so_luong_con_lai'],
+      soLuongConLai: json['so_luong_con_lai'] ?? 0,
     );
   }
 }

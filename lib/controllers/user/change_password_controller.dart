@@ -28,7 +28,7 @@ class ChangePasswordController {
 
       return {
         'success': response.statusCode == 200,
-        'message': data['message'],
+        'message': data['message'] ?? data['error'] ?? 'Không rõ kết quả',
       };
     } catch (e) {
       return {

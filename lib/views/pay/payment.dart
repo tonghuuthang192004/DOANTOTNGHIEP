@@ -14,7 +14,6 @@ import '../../services/user/user_session.dart';
 import '../../models/discount/discount_model.dart';
 import '../../models/cart/cart_model.dart';
 
-
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
 
@@ -69,24 +68,30 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
     super.dispose();
   }
 
-  void _loadDefaultAddress() async {
+  Future<void> _loadDefaultAddress() async {
     final userId = await UserSession.getUserId();
     if (userId == null) return;
 
-    final addressList = await AddressController().getAddresses(userId);
-    if (addressList.isNotEmpty) {
-      final defaultAddress = addressList.firstWhere(
-            (e) => e.isDefault,
-        orElse: () => addressList.first,
-      );
+    try {
+      // Gọi getAddresses không truyền tham số nếu hàm không nhận userId
+      final addressList = await AddressController().getAddresses();
+      if (addressList.isNotEmpty) {
+        final defaultAddress = addressList.firstWhere(
+              (e) => e.isDefault,
+          orElse: () => addressList.first,
+        );
 
-      setState(() {
-        orderData['address'] = defaultAddress.address;
-      });
+        if (!mounted) return;
+        setState(() {
+          orderData['address'] = defaultAddress.address;
+        });
+      }
+    } catch (e) {
+      print('❌ Lỗi tải địa chỉ: $e');
     }
   }
 
-  void _loadCartData() async {
+  Future<void> _loadCartData() async {
     final userId = await UserSession.getUserId();
     if (userId == null) return;
 
@@ -100,24 +105,25 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
 
       double newDiscount = 0;
       if (selectedDiscount != null) {
-        if (selectedDiscount!.loai == 'percent') {
+        if (selectedDiscount!.loai == 'phan_tram') {
           newDiscount = newSubtotal * (selectedDiscount!.giaTri / 100);
         } else {
           newDiscount = selectedDiscount!.giaTri.toDouble();
         }
       }
 
+      if (!mounted) return;
       setState(() {
         cartItems = cartList;
         subtotal = newSubtotal;
         discountAmount = newDiscount;
       });
     } catch (e) {
-      print("❌ Lỗi khi load cart: $e");
+      print("❌ Lỗi khi load giỏ hàng: $e");
     }
   }
 
-  void _selectDiscount() async {
+  Future<void> _selectDiscount() async {
     final userId = await UserSession.getUserId();
     if (userId == null) return;
 
@@ -129,9 +135,10 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
     );
 
     if (selected != null) {
+      if (!mounted) return;
       setState(() {
         selectedDiscount = selected;
-        if (selected.loai == 'percent') {
+        if (selected.loai == 'phan_tram') {
           discountAmount = subtotal * (selected.giaTri / 100);
         } else {
           discountAmount = selected.giaTri.toDouble();
@@ -140,7 +147,7 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
     }
   }
 
-  void _handlePlaceOrder() async {
+  Future<void> _handlePlaceOrder() async {
     if (orderData['address'] == null || orderData['address']!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("⚠️ Vui lòng nhập địa chỉ giao hàng")),
@@ -152,30 +159,33 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
 
     try {
       final userId = await UserSession.getUserId();
-      final addresses = await AddressController().getAddresses(userId!);
+      if (userId == null) throw Exception('User chưa đăng nhập');
+
+      // Lấy danh sách địa chỉ để tìm id theo địa chỉ đã chọn
+      final addresses = await AddressController().getAddresses();
       final address = addresses.firstWhere((e) => e.address == orderData['address']);
       final addressId = address.id;
 
-      // ✅ Tạo đơn hàng
+      // Tạo đơn hàng
       final int orderId = await OrderService.checkout(
         addressId: addressId,
         paymentMethod: selectedPaymentMethod,
-        note: orderData['note'] ?? '',
+        note: orderData['note']?.trim() ?? '',
       );
 
-      // ✅ Tính tổng tiền từ chi tiết đơn
+      // Lấy chi tiết đơn hàng để tính tổng tiền
       final orderDetail = await OrderService.fetchOrderDetail(orderId);
       final totalPrice = orderDetail.fold<double>(0, (sum, item) => sum + item.total);
 
       if (selectedPaymentMethod == 'momo') {
         final payUrl = await OrderService.createMomoPayment(orderId, totalPrice);
-        if (payUrl != null && context.mounted) {
+        if (payUrl != null && mounted) {
           final result = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => WebViewPaymentPage(url: payUrl)),
           );
 
-          if (result == true && context.mounted) {
+          if (result == true && mounted) {
             await CartService.clearCart();
             _showSuccessDialog("✅ Thanh toán MoMo thành công");
           }
@@ -184,7 +194,7 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
         }
       } else if (selectedPaymentMethod == 'cod') {
         final codConfirmed = await OrderService.confirmCodPayment(orderId);
-        if (codConfirmed && context.mounted) {
+        if (codConfirmed && mounted) {
           _showSuccessDialog("✅ Đặt hàng COD thành công");
         } else {
           _showErrorSnack("❌ Xác nhận thanh toán COD thất bại");
@@ -194,7 +204,9 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
       print("❌ Lỗi khi đặt hàng: $e");
       _showErrorSnack("❌ ${e.toString()}");
     } finally {
-      setState(() => isProcessing = false);
+      if (mounted) {
+        setState(() => isProcessing = false);
+      }
     }
   }
 
@@ -277,13 +289,15 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
                   tileColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   title: Text(
-                    selectedDiscount != null ? '${selectedDiscount!.ten} - ${selectedDiscount!.ma}' : 'Chọn mã giảm giá',
+                    selectedDiscount != null
+                        ? '${selectedDiscount!.ten} - ${selectedDiscount!.ma}'
+                        : 'Chọn mã giảm giá',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: selectedDiscount != null
-                      ? Text(selectedDiscount!.loai == 'percent'
-                      ? 'Giảm ${selectedDiscount!.giaTri}% (tối thiểu ${selectedDiscount!.dieuKien}đ)'
-                      : 'Giảm ${selectedDiscount!.giaTri}đ cho đơn từ ${selectedDiscount!.dieuKien}đ')
+                      ? Text(selectedDiscount!.loai == 'phan_tram'
+                      ? 'Giảm ${selectedDiscount!.giaTri}%'
+                      : 'Giảm ${selectedDiscount!.giaTri}đ')
                       : null,
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: _selectDiscount,

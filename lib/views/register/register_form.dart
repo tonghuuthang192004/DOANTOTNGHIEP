@@ -4,6 +4,7 @@ import '../../models/user/user_model.dart';
 import '../../utils/dimensions.dart';
 import 'VerifyEmailScreen.dart';
 
+
 class RegisterForm extends StatefulWidget {
   const RegisterForm({super.key});
 
@@ -37,23 +38,24 @@ class _RegisterFormState extends State<RegisterForm> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_matKhauController.text != _xacNhanMatKhauController.text) {
-      _showMessage('Mật khẩu xác nhận không khớp');
+      _showMessage('⚠️ Mật khẩu xác nhận không khớp');
       return;
     }
 
     setState(() => _isLoading = true);
 
     final user = UserModel(
-      ten: _tenController.text,
-      email: _emailController.text,
+      ten: _tenController.text.trim(),
+      email: _emailController.text.trim(),
       matKhau: _matKhauController.text,
-      soDienThoai: _soDienThoaiController.text,
+      soDienThoai: _soDienThoaiController.text.trim(),
     );
 
     await RegisterController.handleRegister(
       context,
       user,
           () {
+        _clearForm();
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -69,6 +71,15 @@ class _RegisterFormState extends State<RegisterForm> {
     setState(() => _isLoading = false);
   }
 
+  void _clearForm() {
+    _formKey.currentState?.reset();
+    _tenController.clear();
+    _emailController.clear();
+    _matKhauController.clear();
+    _xacNhanMatKhauController.clear();
+    _soDienThoaiController.clear();
+  }
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -81,9 +92,28 @@ class _RegisterFormState extends State<RegisterForm> {
         children: [
           _buildField('Họ tên', _tenController),
           SizedBox(height: Dimensions.height20),
-          _buildField('Email', _emailController, keyboardType: TextInputType.emailAddress),
+          _buildField(
+            'Email',
+            _emailController,
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Vui lòng nhập Email';
+              final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+              if (!emailRegex.hasMatch(value)) return 'Email không hợp lệ';
+              return null;
+            },
+          ),
           SizedBox(height: Dimensions.height20),
-          _buildField('Số điện thoại', _soDienThoaiController, keyboardType: TextInputType.phone),
+          _buildField(
+            'Số điện thoại',
+            _soDienThoaiController,
+            keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value == null || value.isEmpty) return 'Vui lòng nhập số điện thoại';
+              if (!RegExp(r'^\d{10,11}$').hasMatch(value)) return 'Số điện thoại không hợp lệ';
+              return null;
+            },
+          ),
           SizedBox(height: Dimensions.height20),
           _buildPasswordField('Mật khẩu', _matKhauController, _passwordVisible, () {
             setState(() => _passwordVisible = !_passwordVisible);
@@ -93,32 +123,34 @@ class _RegisterFormState extends State<RegisterForm> {
             setState(() => _confirmVisible = !_confirmVisible);
           }),
           SizedBox(height: Dimensions.height25),
-          _isLoading
-              ? const CircularProgressIndicator()
-              : ElevatedButton(
-            onPressed: _submit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFF5722),
-              padding: EdgeInsets.symmetric(
-                vertical: Dimensions.height15,
-                horizontal: Dimensions.width30,
+          SizedBox(
+            width: double.infinity,
+            height: Dimensions.height50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF5722),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(Dimensions.radius12),
+                ),
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(Dimensions.radius12),
-              ),
+              onPressed: _isLoading ? null : _submit,
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                  : const Text('Đăng ký', style: TextStyle(color: Colors.white)),
             ),
-            child: Text('Đăng ký', style: TextStyle(fontSize: Dimensions.font16)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildField(String label, TextEditingController controller, {TextInputType keyboardType = TextInputType.text}) {
+  Widget _buildField(String label, TextEditingController controller,
+      {TextInputType keyboardType = TextInputType.text, String? Function(String?)? validator}) {
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
-      validator: (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập $label' : null,
+      validator: validator ??
+              (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập $label' : null,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
@@ -136,7 +168,12 @@ class _RegisterFormState extends State<RegisterForm> {
     return TextFormField(
       controller: controller,
       obscureText: !visible,
-      validator: (value) => (value == null || value.length < 6) ? 'Mật khẩu tối thiểu 6 ký tự' : null,
+      validator: (value) {
+        if (value == null || value.length < 6) {
+          return 'Mật khẩu tối thiểu 6 ký tự';
+        }
+        return null;
+      },
       decoration: InputDecoration(
         labelText: label,
         suffixIcon: IconButton(

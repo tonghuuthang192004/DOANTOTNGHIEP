@@ -2,106 +2,108 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../api/api_constants.dart';
 import '../../models/address/address_model.dart';
-import '../../models/user/user_token.dart';
+import '../user/user_session.dart';
 
 class AddressService {
-  /// 📥 Lấy danh sách địa chỉ theo userId
-  static Future<List<AddressModel>> fetchAddresses(int userId) async {
-    final token = await UserToken.getToken();
+  static Future<List<AddressModel>> fetchAddresses() async {
+    final token = await UserSession.getToken();
+    if (token == null) throw Exception('❌ Không tìm thấy token');
 
-    final response = await http.get(
-      Uri.parse(API.getAddresses(userId)),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final url = Uri.parse(API.getAddresses);
+    print('📡 [GET] $url');
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> decoded = json.decode(response.body);
-      if (decoded['success'] == true && decoded['data'] != null) {
-        final List<dynamic> data = decoded['data'];
-        return data.map((e) => AddressModel.fromJson(e)).toList();
-      } else {
-        throw Exception('Dữ liệu trả về không hợp lệ');
-      }
+    final res = await http.get(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+
+    print('📥 Response (${res.statusCode}): ${res.body}');
+
+    if (res.statusCode == 200) {
+      final List<dynamic> data = json.decode(res.body)['data'];
+      return data.map((e) => AddressModel.fromJson(e)).toList();
     } else {
-      throw Exception('Lỗi lấy danh sách địa chỉ (${response.statusCode})');
+      throw Exception('❌ Lỗi tải địa chỉ: ${res.statusCode}');
     }
   }
 
-  /// ➕ Thêm địa chỉ mới
-  static Future<void> createAddress(AddressModel model) async {
-    final token = await UserToken.getToken();
+  static Future<void> createAddress(AddressModel address) async {
+    final token = await UserSession.getToken();
+    if (token == null) throw Exception('❌ Không tìm thấy token');
 
-    final response = await http.post(
-      Uri.parse(API.addAddress),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode(model.toJson()),
-    );
+    final url = Uri.parse(API.addAddress);
+    print('📡 [POST] $url');
 
-    if (response.statusCode != 201) {
-      final decoded = json.decode(response.body);
-      throw Exception(decoded['message'] ?? 'Thêm địa chỉ thất bại');
+    final res = await http.post(url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(address.toJson()));
+
+    print('📥 Response (${res.statusCode}): ${res.body}');
+
+    if (res.statusCode != 201 && res.statusCode != 200) {
+      throw Exception('❌ Lỗi thêm địa chỉ: ${res.body}');
     }
   }
 
-  /// ✏️ Cập nhật địa chỉ
-  static Future<void> updateAddress(AddressModel model) async {
-    final token = await UserToken.getToken();
+  static Future<void> updateAddress(AddressModel address) async {
+    final token = await UserSession.getToken();
+    if (token == null) throw Exception('❌ Không tìm thấy token');
 
-    final response = await http.put(
-      Uri.parse(API.updateAddress(model.id)),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode(model.toJson()),
-    );
+    final url = Uri.parse(API.updateAddress(address.id));
+    print('📡 [PUT] $url');
 
-    if (response.statusCode != 200) {
-      final decoded = json.decode(response.body);
-      throw Exception(decoded['message'] ?? 'Cập nhật địa chỉ thất bại');
+    final res = await http.put(url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(address.toJson()));
+
+    print('📥 Response (${res.statusCode}): ${res.body}');
+
+    if (res.statusCode != 200) {
+      throw Exception('❌ Lỗi cập nhật địa chỉ: ${res.body}');
     }
   }
 
-  /// 🗑️ Xoá địa chỉ
   static Future<void> deleteAddress(int id) async {
-    final token = await UserToken.getToken();
+    final token = await UserSession.getToken();
+    if (token == null) throw Exception('❌ Không tìm thấy token');
 
-    final response = await http.delete(
-      Uri.parse(API.deleteAddress(id)),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+    final url = Uri.parse(API.deleteAddress(id));
+    print('📡 [DELETE] $url');
 
-    if (response.statusCode != 200) {
-      final decoded = json.decode(response.body);
-      throw Exception(decoded['message'] ?? 'Xoá địa chỉ thất bại');
+    final res = await http.delete(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+
+    print('📥 Response (${res.statusCode}): ${res.body}');
+
+    if (res.statusCode != 200) {
+      throw Exception('❌ Lỗi xoá địa chỉ: ${res.body}');
     }
   }
 
-  /// 🌟 Đặt địa chỉ mặc định
-  static Future<void> setDefaultAddress(int id, int userId) async {
-    final token = await UserToken.getToken();
+  static Future<void> setDefaultAddress(int id) async {
+    final token = await UserSession.getToken();
+    if (token == null) throw Exception('❌ Không tìm thấy token');
 
-    final response = await http.patch(
-      Uri.parse(API.setDefaultAddress(id)),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({'id_nguoi_dung': userId}),
-    );
+    final url = Uri.parse(API.setDefaultAddress(id));
+    print('📡 [PATCH] $url');
 
-    if (response.statusCode != 200) {
-      final decoded = json.decode(response.body);
-      throw Exception(decoded['message'] ?? 'Lỗi đặt địa chỉ mặc định');
+    final res = await http.patch(url, headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    });
+
+    print('📥 Response (${res.statusCode}): ${res.body}');
+
+    if (res.statusCode != 200) {
+      throw Exception('❌ Lỗi đặt mặc định: ${res.body}');
     }
   }
 }

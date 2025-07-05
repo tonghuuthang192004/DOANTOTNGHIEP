@@ -2,21 +2,24 @@ import '../../models/address/address_model.dart';
 import '../../services/address/address_service.dart';
 
 class AddressController {
-  /// 📥 Lấy toàn bộ địa chỉ của người dùng
-  Future<List<AddressModel>> getAddresses(int userId) async {
+  /// 📥 Lấy danh sách địa chỉ user
+  Future<List<AddressModel>> getAddresses() async {
     try {
-      return await AddressService.fetchAddresses(userId);
+      final addresses = await AddressService.fetchAddresses();
+      return addresses;
     } catch (e) {
       print('❌ [getAddresses] Lỗi: $e');
-      return [];
+      return []; // Trả về danh sách rỗng khi lỗi
     }
   }
 
   /// 🌟 Lấy địa chỉ mặc định nếu có
-  Future<AddressModel?> getDefaultAddress(int userId) async {
+  Future<AddressModel?> getDefaultAddress() async {
     try {
-      final addresses = await getAddresses(userId);
+      final addresses = await getAddresses();
       if (addresses.isEmpty) return null;
+
+      // Ưu tiên địa chỉ mặc định
       return addresses.firstWhere(
             (addr) => addr.isDefault,
         orElse: () => addresses.first,
@@ -34,7 +37,7 @@ class AddressController {
       return true;
     } catch (e) {
       print('❌ [addAddress] Lỗi: $e');
-      return false;
+      rethrow; // 👈 Để UI có thể hiển thị thông báo lỗi
     }
   }
 
@@ -45,7 +48,7 @@ class AddressController {
       return true;
     } catch (e) {
       print('❌ [updateAddress] Lỗi: $e');
-      return false;
+      rethrow;
     }
   }
 
@@ -56,18 +59,18 @@ class AddressController {
       return true;
     } catch (e) {
       print('❌ [deleteAddress] Lỗi: $e');
-      return false;
+      rethrow;
     }
   }
 
   /// 🌟 Đặt địa chỉ mặc định
-  Future<bool> setDefaultAddress(int id, int userId) async {
+  Future<bool> setDefaultAddress(int id) async {
     try {
-      await AddressService.setDefaultAddress(id, userId);
+      await AddressService.setDefaultAddress(id);
       return true;
     } catch (e) {
       print('❌ [setDefaultAddress] Lỗi: $e');
-      return false;
+      rethrow;
     }
   }
 }

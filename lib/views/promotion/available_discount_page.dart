@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:frontendtn1/views/promotion/saved_discount_page.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import '../../api/api_constants.dart';
 import '../../models/discount/discount_model.dart';
 import '../../services/discount/discount_service.dart';
+import 'saved_discount_page.dart';
 
 class AvailableDiscountPage extends StatefulWidget {
   final int userId;
@@ -27,20 +27,24 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
   }
 
   Future<void> fetchDanhSachMa() async {
-    final url = Uri.parse(API.getAllDiscounts);
-    final response = await http.get(url);
+    try {
+      final response = await http.get(Uri.parse(API.getAllDiscounts));
 
-    if (response.statusCode == 200) {
-      final List data = jsonDecode(response.body);
-      setState(() {
-        danhSachMaGiamGia =
-            data.map((e) => DiscountModel.fromJson(e)).toList();
-        isLoading = false;
-      });
-    } else {
-      setState(() {
-        isLoading = false;
-      });
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        setState(() {
+          danhSachMaGiamGia =
+              data.map((e) => DiscountModel.fromJson(e)).toList();
+          isLoading = false;
+        });
+      } else {
+        throw Exception("Không thể tải danh sách mã giảm giá");
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Lỗi: ${e.toString()}')),
+      );
     }
   }
 
@@ -48,7 +52,7 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
     try {
       await DiscountService.saveDiscount(
         userId: widget.userId,
-        discountId: idMa,
+        discountId: idMa, // ✅ đổi từ voucherId sang discountId
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,21 +60,25 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi: ${e.toString()}")),
+        SnackBar(content: Text("❌ Lỗi: ${e.toString()}")),
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Danh sách khuyến mãi",style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold),),
+        title: const Text(
+          "Danh sách khuyến mãi",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         backgroundColor: Colors.orange,
         actions: [
           IconButton(
-            icon: const Icon(Icons.bookmark_added_outlined),
+            icon: const Icon(Icons.bookmark_added_outlined, color: Colors.white),
             tooltip: "Mã đã lưu",
             onPressed: () {
               Navigator.push(
@@ -86,7 +94,9 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : danhSachMaGiamGia.isEmpty
-          ? const Center(child: Text("Không có mã giảm giá nào khả dụng"))
+          ? const Center(
+        child: Text("📭 Không có mã giảm giá nào khả dụng"),
+      )
           : ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: danhSachMaGiamGia.length,
@@ -96,7 +106,7 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            elevation: 4,
+            elevation: 3,
             margin: const EdgeInsets.symmetric(vertical: 8),
             child: ListTile(
               contentPadding: const EdgeInsets.all(16),
@@ -105,29 +115,34 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
                 style: const TextStyle(
                     fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
-                  Text("🎯 Mã: ${ma.ma}"),
-                  Text(
-                    ma.loai == 'percent'
-                        ? "🔻 Giảm ${ma.giaTri}%"
-                        : "🔻 Giảm ${ma.giaTri}đ",
-                  ),
-                  Text("💰 Áp dụng cho đơn từ ${ma.dieuKien}đ"),
-                  Text(
-                      "📅 HSD: ${ma.ketThuc.toLocal().toString().substring(0, 10)}"),
-                ],
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("🎯 Mã: ${ma.ma}"),
+                    Text(
+                      ma.loai == 'phan_tram'
+                          ? "🔻 Giảm ${ma.giaTri}%"
+                          : "🔻 Giảm ${ma.giaTri.toStringAsFixed(0)}đ",
+                    ),
+                    // Text("💰 Đơn tối thiểu: ${ma.dieuKien}đ"),
+                    Text(
+                      "📅 HSD: ${ma.ketThuc.toLocal().toString().substring(0, 10)}",
+                    ),
+                  ],
+                ),
               ),
-              trailing: ElevatedButton(
+              trailing: ElevatedButton.icon(
                 onPressed: () => handleSave(ma.id),
                 style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text("Lưu mã"),
+                icon: const Icon(Icons.bookmark_add_outlined),
+                label: const Text("Lưu"),
               ),
             ),
           );

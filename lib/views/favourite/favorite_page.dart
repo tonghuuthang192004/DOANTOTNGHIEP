@@ -28,7 +28,12 @@ class _FavoritePageState extends State<FavoritePage> {
   Future<void> _loadFavorites() async {
     final id = await UserSession.getUserId();
     print("🧑 [FavoritePage] User ID từ session: $id");
-    if (id == null) return;
+    if (id == null) {
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
 
     userId = id;
 
@@ -43,16 +48,21 @@ class _FavoritePageState extends State<FavoritePage> {
         favoriteProducts = [];
         isLoading = false;
       });
+      debugPrint('❌ Lỗi khi tải danh sách yêu thích: $e');
     }
   }
 
   Future<void> _removeFromFavorites(int productId) async {
     if (userId == null) return;
-    final success = await FavoriteService.removeFavorite(userId!, productId);
+    final success = await FavoriteService.removeFavorite(productId, userId!); // Sửa thứ tự tham số
     if (success) {
       setState(() {
         favoriteProducts.removeWhere((p) => p.id == productId);
       });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Xoá sản phẩm yêu thích thất bại')),
+      );
     }
   }
 
@@ -91,9 +101,7 @@ class _FavoritePageState extends State<FavoritePage> {
                 );
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          '❌ Lỗi thêm vào giỏ hàng: $e')),
+                  SnackBar(content: Text('❌ Lỗi thêm vào giỏ hàng: $e')),
                 );
               }
             },

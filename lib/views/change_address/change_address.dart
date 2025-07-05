@@ -13,50 +13,23 @@ class AddressManagementPage extends StatefulWidget {
 
 class _AddressManagementPageState extends State<AddressManagementPage> {
   List<AddressModel> addresses = [];
-  int? userId;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUserIdAndAddresses();
-  }
-
-  Future<void> _loadUserIdAndAddresses() async {
-    try {
-      final fetchedUserIdStr = await UserSession.getUserId();
-      if (fetchedUserIdStr == null) {
-        _showSnackBar('Không tìm thấy userId', isError: true);
-        return;
-      }
-
-      final parsedUserId = int.tryParse(fetchedUserIdStr.toString());
-      if (parsedUserId == null) {
-        _showSnackBar('ID người dùng không hợp lệ', isError: true);
-        return;
-      }
-
-      userId = parsedUserId;
-      await _loadAddresses();
-    } catch (e) {
-      _showSnackBar('Lỗi tải dữ liệu: $e', isError: true);
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
-    }
+    _loadAddresses();
   }
 
   Future<void> _loadAddresses() async {
-    if (userId == null) return;
-
+    setState(() => isLoading = true);
     try {
-      final fetched = await AddressService.fetchAddresses(userId!);
-      setState(() {
-        addresses = fetched;
-      });
+      final fetched = await AddressService.fetchAddresses();
+      setState(() => addresses = fetched);
     } catch (e) {
-      _showSnackBar('Lỗi tải danh sách địa chỉ: $e', isError: true);
+      _showSnackBar('❌ Lỗi tải địa chỉ: $e', isError: true);
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
@@ -73,35 +46,38 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
   Widget build(BuildContext context) {
     Dimensions.init(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF4F6F8),
       appBar: AppBar(
         title: Text('Quản lý địa chỉ', style: TextStyle(fontSize: Dimensions.font18)),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : addresses.isEmpty
-          ? const Center(child: Text('Chưa có địa chỉ nào'))
+          ? Center(
+        child: Text(
+          '📭 Chưa có địa chỉ nào',
+          style: TextStyle(fontSize: Dimensions.font16, color: Colors.grey),
+        ),
+      )
           : RefreshIndicator(
         onRefresh: _loadAddresses,
         child: ListView.builder(
           padding: EdgeInsets.all(Dimensions.height20),
           itemCount: addresses.length,
-          itemBuilder: (context, index) =>
-              _buildAddressCard(addresses[index], index),
+          itemBuilder: (context, index) => _buildAddressCard(addresses[index]),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddAddressDialog,
+        onPressed: () => _showAddressDialog(),
         backgroundColor: Colors.orange,
         child: Icon(Icons.add, color: Colors.white, size: Dimensions.iconSize24),
       ),
     );
   }
 
-  Widget _buildAddressCard(AddressModel address, int index) {
+  Widget _buildAddressCard(AddressModel address) {
     return Container(
       margin: EdgeInsets.only(bottom: Dimensions.height15),
       decoration: BoxDecoration(
@@ -111,8 +87,8 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: Offset(0, Dimensions.height5),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -122,7 +98,7 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(child: _buildAddressInfo(address)),
-            _buildPopupMenu(address, index),
+            _buildPopupMenu(address),
           ],
         ),
       ),
@@ -144,66 +120,75 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
             if (address.isDefault)
               Container(
                 margin: EdgeInsets.only(left: Dimensions.width10),
-                padding: EdgeInsets.symmetric(
-                  horizontal: Dimensions.width10,
-                  vertical: Dimensions.height5,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: Dimensions.width10, vertical: Dimensions.height5),
                 decoration: BoxDecoration(
                   color: Colors.orange,
                   borderRadius: BorderRadius.circular(Dimensions.radius12),
                 ),
-                child: Text('Mặc định',
-                    style: TextStyle(color: Colors.white, fontSize: Dimensions.font12)),
+                child: Text(
+                  'Mặc định',
+                  style: TextStyle(color: Colors.white, fontSize: Dimensions.font12),
+                ),
               ),
           ],
         ),
         SizedBox(height: Dimensions.height10),
-        Text(address.address, style: TextStyle(fontSize: Dimensions.font14)),
+        Text(address.address, style: TextStyle(fontSize: Dimensions.font14, color: Colors.grey[800])),
       ],
     );
   }
 
-  Widget _buildPopupMenu(AddressModel address, int index) {
+  Widget _buildPopupMenu(AddressModel address) {
     return PopupMenuButton<String>(
-      onSelected: (value) => _handleAddressAction(value, address, index),
+      onSelected: (value) => _handleAddressAction(value, address),
       itemBuilder: (context) => [
-        PopupMenuItem(value: 'edit', child: const Text('Sửa')),
-        if (!address.isDefault)
-          PopupMenuItem(value: 'default', child: const Text('Đặt mặc định')),
-        PopupMenuItem(value: 'delete', child: const Text('Xoá')),
+        const PopupMenuItem(value: 'edit', child: Text('Sửa')),
+        if (!address.isDefault) const PopupMenuItem(value: 'default', child: Text('Đặt mặc định')),
+        const PopupMenuItem(value: 'delete', child: Text('Xoá')),
       ],
     );
   }
 
-  void _handleAddressAction(String action, AddressModel address, int index) async {
-    if (userId == null) return;
-
+  Future<void> _handleAddressAction(String action, AddressModel address) async {
     try {
       switch (action) {
         case 'edit':
-          _showAddressDialog(address: address, index: index);
+          _showAddressDialog(address: address);
           break;
         case 'default':
-          await AddressService.setDefaultAddress(address.id, userId!);
-          _showSnackBar('Đặt mặc định thành công');
-          await _loadAddresses();
+          await _showLoading(() async {
+            await AddressService.setDefaultAddress(address.id);
+            _showSnackBar('✅ Đặt mặc định thành công');
+            await _loadAddresses();
+          });
           break;
         case 'delete':
-          await AddressService.deleteAddress(address.id);
-          _showSnackBar('Xoá địa chỉ thành công');
-          await _loadAddresses();
+          await _showLoading(() async {
+            await AddressService.deleteAddress(address.id);
+            _showSnackBar('🗑️ Xoá địa chỉ thành công');
+            await _loadAddresses();
+          });
           break;
       }
     } catch (e) {
-      _showSnackBar('Lỗi thao tác: $e', isError: true);
+      _showSnackBar('❌ Lỗi: $e', isError: true);
     }
   }
 
-  void _showAddAddressDialog() {
-    _showAddressDialog();
+  Future<void> _showLoading(Future<void> Function() action) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      await action();
+    } finally {
+      Navigator.pop(context); // Close loading
+    }
   }
 
-  void _showAddressDialog({AddressModel? address, int? index}) {
+  void _showAddressDialog({AddressModel? address}) {
     final nameController = TextEditingController(text: address?.name ?? '');
     final phoneController = TextEditingController(text: address?.phone ?? '');
     final addressController = TextEditingController(text: address?.address ?? '');
@@ -213,77 +198,95 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Dimensions.radius15)),
-          title: Text(address == null ? 'Thêm địa chỉ mới' : 'Sửa địa chỉ'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                children: [
-                  _buildTextField(nameController, 'Họ tên'),
-                  SizedBox(height: Dimensions.height15),
-                  _buildTextField(phoneController, 'Số điện thoại', type: TextInputType.phone),
-                  SizedBox(height: Dimensions.height15),
-                  _buildTextField(addressController, 'Địa chỉ'),
-                  SizedBox(height: Dimensions.height15),
-                  CheckboxListTile(
-                    title: const Text('Đặt làm địa chỉ mặc định'),
-                    value: isDefault,
-                    onChanged: (value) => setDialogState(() => isDefault = value ?? false),
-                  ),
-                ],
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.radius15)),
+            title: Text(address == null ? 'Thêm địa chỉ mới' : 'Sửa địa chỉ'),
+            content: SingleChildScrollView(
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _customTextField(controller: nameController, label: 'Họ tên', validator: (v) => v!.isEmpty ? '⚠️ Nhập họ tên' : null),
+                    SizedBox(height: Dimensions.height15),
+                    _customTextField(
+                      controller: phoneController,
+                      label: 'Số điện thoại',
+                      type: TextInputType.phone,
+                      validator: (v) => v!.isEmpty
+                          ? '⚠️ Nhập số điện thoại'
+                          : (RegExp(r'^[0-9]{10,11}$').hasMatch(v) ? null : '⚠️ Số không hợp lệ'),
+                    ),
+                    SizedBox(height: Dimensions.height15),
+                    _customTextField(controller: addressController, label: 'Địa chỉ', validator: (v) => v!.isEmpty ? '⚠️ Nhập địa chỉ' : null),
+                    SizedBox(height: Dimensions.height15),
+                    CheckboxListTile(
+                      title: const Text('Đặt làm mặc định'),
+                      value: isDefault,
+                      onChanged: (value) => setDialogState(() => isDefault = value ?? false),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-            ElevatedButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate() || userId == null) return;
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+              ElevatedButton(
+                onPressed: () async {
+                  if (!formKey.currentState!.validate()) return;
 
-                final newAddress = AddressModel(
-                  id: address?.id ?? 0,
-                  userId: userId!,
-                  name: nameController.text,
-                  phone: phoneController.text,
-                  address: addressController.text,
-                  isDefault: isDefault,
-                );
-
-                try {
-                  if (address == null) {
-                    await AddressService.createAddress(newAddress);
-                    _showSnackBar('Thêm địa chỉ thành công');
-                  } else {
-                    await AddressService.updateAddress(newAddress);
-                    _showSnackBar('Cập nhật địa chỉ thành công');
+                  final userId = await UserSession.getUserId();
+                  if (userId == null) {
+                    _showSnackBar('❌ Không tìm thấy thông tin người dùng', isError: true);
+                    return;
                   }
-                  Navigator.pop(context);
-                  await _loadAddresses();
-                } catch (e) {
-                  _showSnackBar('Lỗi lưu địa chỉ: $e', isError: true);
-                }
-              },
-              child: Text(address == null ? 'Thêm' : 'Cập nhật'),
-            ),
-          ],
-        ),
+
+                  final newAddress = AddressModel(
+                    id: address?.id ?? 0,
+                    userId: userId,
+                    name: nameController.text.trim(),
+                    phone: phoneController.text.trim(),
+                    address: addressController.text.trim(),
+                    isDefault: isDefault,
+                  );
+
+                  try {
+                    await _showLoading(() async {
+                      if (address == null) {
+                        await AddressService.createAddress(newAddress);
+                        _showSnackBar('✅ Thêm địa chỉ thành công');
+                      } else {
+                        await AddressService.updateAddress(newAddress);
+                        _showSnackBar('✅ Cập nhật địa chỉ thành công');
+                      }
+                      await _loadAddresses();
+                    });
+                    Navigator.pop(context);
+                  } catch (e) {
+                    _showSnackBar('❌ Lỗi lưu địa chỉ: $e', isError: true);
+                  }
+                },
+                child: Text(address == null ? 'Thêm' : 'Cập nhật'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType type = TextInputType.text}) {
+  Widget _customTextField({
+    required TextEditingController controller,
+    required String label,
+    TextInputType type = TextInputType.text,
+    String? Function(String?)? validator,
+  }) {
     return TextFormField(
       controller: controller,
       keyboardType: type,
-      decoration: InputDecoration(
-        labelText: label,
-        border: const OutlineInputBorder(),
-      ),
-      validator: (value) => value == null || value.isEmpty ? 'Vui lòng nhập $label' : null,
+      decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
+      validator: validator,
     );
   }
 }
