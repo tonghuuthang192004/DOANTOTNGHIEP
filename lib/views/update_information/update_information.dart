@@ -1,16 +1,10 @@
-import 'dart:convert';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
-
-import '../../api/api_constants.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:image/image.dart' as img;
 import '../../controllers/user/update_proflie_controller.dart';
-import '../../models/user/user_token.dart';
 import '../../utils/dimensions.dart';
-
-import '../../widgets/bottom_navigation_bar.dart';
 import '../profile/profile_screen.dart';
 
 class UpdateProfilePage extends StatefulWidget {
@@ -23,13 +17,12 @@ class UpdateProfilePage extends StatefulWidget {
 class _UpdateProfilePageState extends State<UpdateProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _birthdayController = TextEditingController();
-  String selectedGender = 'Nam';
-  String? avatarUrl;
+  String? avatarUrl; // URL ảnh hiện tại từ server
+  File? newAvatarFile; // Ảnh mới user chọn
 
   final _controller = UpdateProfileController();
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -37,174 +30,194 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
     _loadUserProfile();
   }
 
-  /// 📦 Load user profile từ API
+  /// 🔄 Load user profile từ API
   Future<void> _loadUserProfile() async {
     final user = await _controller.getCurrentUserProfile();
     if (user != null) {
       setState(() {
         _nameController.text = user.ten;
-        _emailController.text = user.email;
         _phoneController.text = user.soDienThoai;
-        selectedGender = user.gioiTinh ?? 'Nam';
-        _birthdayController.text = _formatDate(user.ngaySinh);
         avatarUrl = user.avatar;
+        isLoading = false;
       });
+    } else {
+      setState(() => isLoading = false);
     }
   }
 
-  /// 📅 Format ngày yyyy-MM-dd → dd/MM/yyyy
-  String _formatDate(String? date) {
-    if (date == null) return '';
-    try {
-      final parsed = DateTime.parse(date);
-      return '${parsed.day.toString().padLeft(2, '0')}/${parsed.month.toString().padLeft(2, '0')}/${parsed.year}';
-    } catch (_) {
-      return '';
+  Future<File> convertToJPG(File file) async {
+    // Đọc file ảnh vào memory
+    final bytes = await file.readAsBytes();
+    final image = img.decodeImage(bytes);
+
+    if (image == null) {
+      throw Exception('Không thể đọc file ảnh');
     }
+
+    // Encode lại ảnh thành JPG với chất lượng 90%
+    final jpg = img.encodeJpg(image, quality: 90);
+
+    // Tạo file mới đường dẫn .jpg
+    final newPath = file.path.replaceAll(RegExp(r'\.\w+$'), '.jpg');
+    final newFile = File(newPath);
+
+    // Ghi file JPG mới
+    await newFile.writeAsBytes(jpg);
+
+    return newFile;
   }
 
-  /// 📅 Chuyển ngày dd/MM/yyyy → yyyy-MM-dd
-  String? _parseDate(String date) {
-    if (date.isEmpty) return null;
-    try {
-      final parts = date.split('/');
-      if (parts.length == 3) {
-        final parsedDate = DateTime(
-          int.parse(parts[2]),
-          int.parse(parts[1]),
-          int.parse(parts[0]),
-        );
-        return parsedDate.toIso8601String().split('T')[0];
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  /// 📸 Chọn ảnh từ gallery
-  Future<File?> _pickImageFromGallery() async {
+  /// 📷 Hiện bottom sheet chọn ảnh từ Camera hoặc Gallery
+  Future<void> _showAvatarOptions() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      return File(pickedFile.path);
-    }
-    return null;
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt, color: Colors.orange),
+                title: const Text('Chụp ảnh mới'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final pickedFile = await picker.pickImage(source: ImageSource.camera);
+                  if (pickedFile != null) {
+                    File avatarFile = File(pickedFile.path);
+                    avatarFile = await convertToJPG(avatarFile);
+                    setState(() {
+                      newAvatarFile = avatarFile;
+                    });
+                  }
+                },
+              ),
+
+              ListTile(
+                leading: const Icon(Icons.photo_library, color: Colors.orange),
+                title: const Text('Chọn từ thư viện'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await requestGalleryPermission();
+                  final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+                  if (pickedFile != null) {
+                    File avatarFile = File(pickedFile.path);
+                    avatarFile = await convertToJPG(avatarFile);
+                    setState(() {
+                      newAvatarFile = avatarFile;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  /// 📤 Upload avatar mới lên server
-  Future<void> _changeAvatar() async {
-    final imageFile = await _pickImageFromGallery();
-    if (imageFile == null) return;
 
-    final token = await UserToken.getToken();
-    final uploadUrl = Uri.parse(API.updateAvatar);
+  Future<void> requestGalleryPermission() async {
+    if (Platform.isAndroid) {
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+      }
+      if (!status.isGranted) {
+        throw Exception('Ứng dụng cần quyền truy cập bộ nhớ để chọn ảnh.');
+      }
+    } else if (Platform.isIOS) {
+      var status = await Permission.photos.status;
+      if (!status.isGranted) {
+        status = await Permission.photos.request();
+      }
+      if (!status.isGranted) {
+        throw Exception('Ứng dụng cần quyền truy cập ảnh để chọn ảnh.');
+      }
+    }
+  }
+
+
+  /// 💾 Lưu thay đổi profile
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Xác nhận'),
+        content: const Text('Bạn có chắc muốn lưu thay đổi?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            child: const Text('Xác nhận'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => isLoading = true);
 
     try {
-      final request = http.MultipartRequest('POST', uploadUrl);
-      request.headers['Authorization'] = 'Bearer $token';
-      request.files.add(await http.MultipartFile.fromPath('avatar', imageFile.path));
+      // 📝 Cập nhật tên và SĐT
+      final infoResult = await _controller.updateProfileInfo(
+        ten: _nameController.text.trim(),
+        soDienThoai: _phoneController.text.trim(),
+      );
 
-      final response = await request.send();
-      final responseBody = await response.stream.bytesToString();
-      final decoded = jsonDecode(responseBody);
-
-      if (response.statusCode == 200 && decoded['success'] == true) {
-        // ✅ Cập nhật avatarUrl ngay
-        setState(() {
-          avatarUrl = decoded['avatar_url']; // API trả về URL mới
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Avatar đã cập nhật thành công')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ Lỗi upload avatar: ${decoded['message']}')),
-        );
+      // 📸 Nếu có avatar mới thì upload
+      Map<String, dynamic> avatarResult = {'success': true};
+      if (newAvatarFile != null) {
+        avatarResult = await _controller.uploadAvatar(newAvatarFile!);
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Lỗi kết nối upload: $e')),
-      );
-    }
-  }
 
-  /// 💾 Lưu profile sau khi chỉnh sửa
-  Future<void> _saveProfile() async {
-    if (_formKey.currentState!.validate()) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Xác nhận'),
-          content: const Text('Bạn có chắc muốn lưu thay đổi?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const MainNavigation()),
-                      (route) => false, // 👈 Xoá hết stack để về MainNavigation
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-              ),
-              child: const Text('Xác nhận'),
-            ),
-
-          ],
-        ),
-      );
-
-      if (confirm != true) return;
-
-      final result = await _controller.updateProfile(
-        ten: _nameController.text,
-        soDienThoai: _phoneController.text,
-        gioiTinh: selectedGender,
-        ngaySinh: _parseDate(_birthdayController.text),
-        avatar: avatarUrl,
-      );
+      setState(() => isLoading = false);
 
       if (!mounted) return;
 
-      if (result['success'] == true) {
+      bool isSuccess(dynamic value) => value == true || value == 'true';
+
+      print('📦 [DEBUG] infoResult: $infoResult');
+      print('📦 [DEBUG] avatarResult: $avatarResult');
+
+      if (isSuccess(infoResult['success']) ||
+          isSuccess(avatarResult['success'])) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Cập nhật thành công!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('✅ Cập nhật thành công!'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const ProfilePage()),
-              (_) => false,
+          (_) => false,
         );
       } else {
+        final errorMsg = infoResult['message'] ??
+            avatarResult['message'] ??
+            'Cập nhật thất bại';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('❌ ${result['message']}'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('❌ $errorMsg'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
-    }
-  }
-
-  /// 📅 Chọn ngày sinh
-  Future<void> _selectDate(BuildContext context) async {
-    final now = DateTime.now();
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: now.subtract(const Duration(days: 365 * 20)),
-      firstDate: DateTime(1950),
-      lastDate: now,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: Colors.orange)),
-          child: child!,
-        );
-      },
-    );
-
-    if (pickedDate != null) {
-      _birthdayController.text =
-      '${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.year}';
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Lỗi: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -214,40 +227,58 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Center(child: Text('Cập nhật thông tin')),
+        title: const Text('Cập nhật thông tin'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           TextButton(
             onPressed: _saveProfile,
-            child: const Text('Lưu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            child: const Text('Lưu',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(Dimensions.height20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _buildAvatarSection(),
-              SizedBox(height: Dimensions.height25),
-              _buildFormFields(),
-            ],
-          ),
-        ),
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: EdgeInsets.all(Dimensions.height20),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    _buildAvatarSection(),
+                    SizedBox(height: Dimensions.height25),
+                    _buildFormFields(),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
   Widget _buildAvatarSection() {
+    ImageProvider avatarImage;
+    if (newAvatarFile != null) {
+      avatarImage = FileImage(newAvatarFile!);
+    } else if (avatarUrl != null) {
+      avatarImage = NetworkImage(avatarUrl!);
+    } else {
+      avatarImage = const AssetImage('images/avatar.jpg');
+    }
+
     return Container(
       padding: EdgeInsets.all(Dimensions.height25),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(Dimensions.radius20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         children: [
@@ -255,15 +286,18 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
             children: [
               CircleAvatar(
                 radius: Dimensions.height50,
-                backgroundImage: avatarUrl != null
-                    ? NetworkImage(avatarUrl!)
-                    : const AssetImage('images/avatar.jpg') as ImageProvider,
+                backgroundImage: avatarImage,
+                onBackgroundImageError: (_, __) {
+                  setState(() {
+                    avatarUrl = null; // fallback về ảnh mặc định
+                  });
+                },
               ),
               Positioned(
                 bottom: 0,
                 right: 0,
                 child: GestureDetector(
-                  onTap: _changeAvatar,
+                  onTap: _showAvatarOptions,
                   child: Container(
                     padding: EdgeInsets.all(Dimensions.height8),
                     decoration: BoxDecoration(
@@ -271,7 +305,8 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
                     ),
-                    child: Icon(Icons.camera_alt, color: Colors.white, size: Dimensions.iconSize20),
+                    child: Icon(Icons.camera_alt,
+                        color: Colors.white, size: Dimensions.iconSize20),
                   ),
                 ),
               ),
@@ -279,8 +314,9 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
           ),
           SizedBox(height: Dimensions.height15),
           TextButton(
-            onPressed: _changeAvatar,
-            child: const Text('Thay đổi ảnh đại diện', style: TextStyle(color: Colors.orange)),
+            onPressed: _showAvatarOptions,
+            child: const Text('Thay đổi ảnh đại diện',
+                style: TextStyle(color: Colors.orange)),
           ),
         ],
       ),
@@ -293,26 +329,41 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(Dimensions.radius20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4))
+        ],
       ),
       child: Column(
         children: [
-          _buildTextField(_nameController, 'Họ và tên', Icons.person, validator: (v) => v!.isEmpty ? 'Nhập họ tên' : null),
+          _buildTextField(
+            _nameController,
+            'Họ và tên',
+            Icons.person,
+            validator: (v) => v!.isEmpty ? 'Nhập họ tên' : null,
+          ),
           SizedBox(height: Dimensions.height20),
-          _buildTextField(_emailController, 'Email', Icons.email, readOnly: true),
-          SizedBox(height: Dimensions.height20),
-          _buildTextField(_phoneController, 'Số điện thoại', Icons.phone, validator: (v) => v!.isEmpty ? 'Nhập số điện thoại' : null),
-          SizedBox(height: Dimensions.height20),
-          _buildTextField(_birthdayController, 'Ngày sinh', Icons.cake, readOnly: true, onTap: () => _selectDate(context)),
-          SizedBox(height: Dimensions.height20),
-          _buildGenderSelector(),
+          _buildTextField(
+            _phoneController,
+            'Số điện thoại',
+            Icons.phone,
+            validator: (v) => v!.isEmpty ? 'Nhập số điện thoại' : null,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon,
-      {bool readOnly = false, String? Function(String?)? validator, VoidCallback? onTap}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    bool readOnly = false,
+    String? Function(String?)? validator,
+    VoidCallback? onTap,
+  }) {
     return TextFormField(
       controller: controller,
       readOnly: readOnly,
@@ -321,7 +372,8 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Colors.orange),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(Dimensions.radius12)),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(Dimensions.radius12)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dimensions.radius12),
           borderSide: const BorderSide(color: Colors.orange, width: 2),
@@ -329,38 +381,6 @@ class _UpdateProfilePageState extends State<UpdateProfilePage> {
         filled: true,
         fillColor: Colors.grey[50],
       ),
-    );
-  }
-
-  Widget _buildGenderSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Giới tính', style: TextStyle(fontWeight: FontWeight.w500, fontSize: Dimensions.font16)),
-        SizedBox(height: Dimensions.height12),
-        Row(
-          children: [
-            Expanded(
-              child: RadioListTile<String>(
-                title: const Text('Nam'),
-                value: 'Nam',
-                groupValue: selectedGender,
-                onChanged: (value) => setState(() => selectedGender = value!),
-                activeColor: Colors.orange,
-              ),
-            ),
-            Expanded(
-              child: RadioListTile<String>(
-                title: const Text('Nữ'),
-                value: 'Nữ',
-                groupValue: selectedGender,
-                onChanged: (value) => setState(() => selectedGender = value!),
-                activeColor: Colors.orange,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

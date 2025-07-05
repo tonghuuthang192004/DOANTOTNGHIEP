@@ -24,12 +24,15 @@ class ProductModel {
       moTa: json['mo_ta'] ?? '',
       gia: (json['gia'] is int)
           ? (json['gia'] as int).toDouble()
-          : double.tryParse(json['gia'].toString()) ?? 0.0,
+          : double.tryParse(json['gia']?.toString() ?? '0') ?? 0.0,
       hinhAnh: json['hinh_anh'] ?? '',
-      danhGia: double.tryParse(json['danh_gia']?.toString() ?? '4.5') ?? 4.5,
-      danhMucId: json['danh_muc_id'] ?? json['id_danh_muc'] ?? 0,
+      danhGia: json['danh_gia'] != null
+          ? double.tryParse(json['danh_gia'].toString()) ?? 0.0
+          : 0.0,
+      danhMucId: json['danh_muc_id'] ?? json['id_danh_muc'],
     );
   }
+
 
   Map<String, dynamic> toJson() {
     return {

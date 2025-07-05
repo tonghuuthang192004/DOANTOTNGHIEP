@@ -17,9 +17,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  bool _showCurrentPassword = false;
-  bool _showNewPassword = false;
-  bool _showConfirmPassword = false;
+  final _visibility = {'current': false, 'new': false, 'confirm': false};
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +26,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Center(child: Text('Đổi mật khẩu')),
+        title: const Text('Đổi mật khẩu'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
-        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(Dimensions.height20),
@@ -39,11 +36,25 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           key: _formKey,
           child: Column(
             children: [
-              _buildSecurityNote(),
+              _securityNote(),
+              SizedBox(height: Dimensions.height20),
+              _passwordField(_currentPasswordController, 'Mật khẩu hiện tại', 'current',
+                  validator: (v) =>
+                  v!.isEmpty ? 'Vui lòng nhập mật khẩu hiện tại' : null),
+              SizedBox(height: Dimensions.height15),
+              _passwordField(_newPasswordController, 'Mật khẩu mới', 'new',
+                  validator: _validateNewPassword),
+              SizedBox(height: Dimensions.height15),
+              _passwordField(_confirmPasswordController, 'Xác nhận mật khẩu mới', 'confirm',
+                  validator: (v) {
+                    if (v!.isEmpty) return 'Vui lòng xác nhận mật khẩu';
+                    if (v != _newPasswordController.text) return 'Mật khẩu không khớp';
+                    return null;
+                  }),
               SizedBox(height: Dimensions.height25),
-              _buildPasswordForm(),
-              SizedBox(height: Dimensions.height25),
-              _buildPasswordTips(),
+              _changePasswordButton(),
+              SizedBox(height: Dimensions.height20),
+              _passwordTips(),
             ],
           ),
         ),
@@ -51,205 +62,132 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     );
   }
 
-  Widget _buildSecurityNote() {
-    return Container(
-      padding: EdgeInsets.all(Dimensions.height20),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(Dimensions.radius15),
-        border: Border.all(color: Colors.blue[200]!),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info, color: Colors.blue[600]),
-          SizedBox(width: Dimensions.width12),
-          Expanded(
-            child: Text(
-              'Mật khẩu mạnh gồm ít nhất 8 ký tự, có chữ hoa, chữ thường và số.',
-              style: TextStyle(
-                  color: Colors.blue[700], fontSize: Dimensions.font14),
-            ),
-          ),
-        ],
-      ),
+  Widget _securityNote() {
+    return _infoBox(
+      icon: Icons.info,
+      color: Colors.blue,
+      text: 'Mật khẩu mạnh gồm ít nhất 8 ký tự, có chữ hoa, chữ thường và số.',
     );
   }
 
-  Widget _buildPasswordForm() {
+  Widget _passwordTips() {
+    return _infoBox(
+      icon: Icons.lock,
+      color: Colors.grey,
+      title: 'Mẹo tạo mật khẩu mạnh:',
+      tips: [
+        'Sử dụng ít nhất 8 ký tự',
+        'Kết hợp chữ hoa và chữ thường',
+        'Bao gồm số và ký tự đặc biệt',
+        'Không dùng thông tin cá nhân',
+        'Không lặp lại mật khẩu cũ',
+      ],
+    );
+  }
+
+  Widget _infoBox({
+    required IconData icon,
+    required Color color,
+    String? text,
+    String? title,
+    List<String>? tips,
+  }) {
     return Container(
-      padding: EdgeInsets.all(Dimensions.height25),
+      padding: EdgeInsets.all(Dimensions.height15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(Dimensions.radius20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(Dimensions.radius12),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildPasswordField(
-            controller: _currentPasswordController,
-            label: 'Mật khẩu hiện tại',
-            isVisible: _showCurrentPassword,
-            onToggleVisibility: () =>
-                setState(() => _showCurrentPassword = !_showCurrentPassword),
-            validator: (value) => value?.isEmpty == true
-                ? 'Vui lòng nhập mật khẩu hiện tại'
-                : null,
-          ),
-          SizedBox(height: Dimensions.height20),
-          _buildPasswordField(
-            controller: _newPasswordController,
-            label: 'Mật khẩu mới',
-            isVisible: _showNewPassword,
-            onToggleVisibility: () =>
-                setState(() => _showNewPassword = !_showNewPassword),
-            validator: (value) {
-              if (value?.isEmpty == true) return 'Vui lòng nhập mật khẩu mới';
-              if (value!.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
-              if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
-                return 'Phải có chữ hoa, chữ thường và số';
-              }
-              return null;
-            },
-          ),
-          SizedBox(height: Dimensions.height20),
-          _buildPasswordField(
-            controller: _confirmPasswordController,
-            label: 'Xác nhận mật khẩu mới',
-            isVisible: _showConfirmPassword,
-            onToggleVisibility: () =>
-                setState(() => _showConfirmPassword = !_showConfirmPassword),
-            validator: (value) {
-              if (value?.isEmpty == true) return 'Vui lòng xác nhận mật khẩu';
-              if (value != _newPasswordController.text)
-                return 'Mật khẩu xác nhận không khớp';
-              return null;
-            },
-          ),
-          SizedBox(height: Dimensions.height30),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _changePassword,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                padding: EdgeInsets.symmetric(vertical: Dimensions.height15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(Dimensions.radius12),
+          Row(
+            children: [
+              Icon(icon, color: color),
+              SizedBox(width: Dimensions.width8),
+              Expanded(
+                child: Text(
+                  text ?? title ?? '',
+                  style: TextStyle(color: color, fontSize: Dimensions.font14),
                 ),
               ),
-              child: Text(
-                'Đổi mật khẩu',
-                style: TextStyle(
-                  fontSize: Dimensions.font16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            ],
           ),
+          if (tips != null)
+            ...tips.map((tip) => Padding(
+              padding: EdgeInsets.only(top: Dimensions.height8),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: Dimensions.iconSize16),
+                  SizedBox(width: Dimensions.width8),
+                  Expanded(
+                    child: Text(tip,
+                        style: TextStyle(color: Colors.grey[700], fontSize: Dimensions.font14)),
+                  ),
+                ],
+              ),
+            )),
         ],
       ),
     );
   }
 
-  Widget _buildPasswordField({
-    required TextEditingController controller,
-    required String label,
-    required bool isVisible,
-    required VoidCallback onToggleVisibility,
-    String? Function(String?)? validator,
-  }) {
+  Widget _passwordField(TextEditingController controller, String label, String key,
+      {String? Function(String?)? validator}) {
     return TextFormField(
       controller: controller,
-      obscureText: !isVisible,
+      obscureText: !_visibility[key]!,
       validator: validator,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: const Icon(Icons.lock, color: Colors.orange),
         suffixIcon: IconButton(
-          icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off),
-          onPressed: onToggleVisibility,
-          color: Colors.grey[600],
+          icon: Icon(_visibility[key]! ? Icons.visibility : Icons.visibility_off),
+          onPressed: () => setState(() => _visibility[key] = !_visibility[key]!),
+          color: Colors.grey,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Dimensions.radius12),
-          borderSide: BorderSide(color: Colors.grey[300]!),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimensions.radius12),
-          borderSide: const BorderSide(color: Colors.orange, width: 2),
         ),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: Colors.white,
       ),
     );
   }
 
-  Widget _buildPasswordTips() {
-    return Container(
-      padding: EdgeInsets.all(Dimensions.height20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(Dimensions.radius15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  Widget _changePasswordButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _changePassword,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange,
+          padding: EdgeInsets.symmetric(vertical: Dimensions.height15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Dimensions.radius12),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Mẹo tạo mật khẩu mạnh:',
-            style: TextStyle(
-              fontSize: Dimensions.font16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
-            ),
-          ),
-          SizedBox(height: Dimensions.height12),
-          _buildPasswordTip('Sử dụng ít nhất 8 ký tự'),
-          _buildPasswordTip('Kết hợp chữ hoa và chữ thường'),
-          _buildPasswordTip('Bao gồm số và ký tự đặc biệt'),
-          _buildPasswordTip('Không dùng thông tin cá nhân'),
-          _buildPasswordTip('Không lặp lại mật khẩu cũ'),
-        ],
+        ),
+        child: const Text('Đổi mật khẩu',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
     );
   }
 
-  Widget _buildPasswordTip(String tip) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: Dimensions.height5),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle,
-              color: Colors.green[400], size: Dimensions.iconSize16),
-          SizedBox(width: Dimensions.width8),
-          Text(tip,
-              style: TextStyle(
-                  color: Colors.grey[600], fontSize: Dimensions.font14)),
-        ],
-      ),
-    );
+  String? _validateNewPassword(String? value) {
+    if (value!.isEmpty) return 'Vui lòng nhập mật khẩu mới';
+    if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
+    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
+      return 'Phải có chữ hoa, chữ thường và số';
+    }
+    return null;
   }
 
-  void _changePassword() async {
+  Future<void> _changePassword() async {
     if (_formKey.currentState!.validate()) {
       final confirm = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Dimensions.radius12)),
+        builder: (_) => AlertDialog(
           title: const Text('Xác nhận đổi mật khẩu'),
           content: const Text('Bạn có chắc chắn muốn đổi mật khẩu không?'),
           actions: [
@@ -260,8 +198,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-              child:
-                  const Text('Xác nhận', style: TextStyle(color: Colors.white)),
+              child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -274,29 +211,30 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           newPassword: _newPasswordController.text,
         );
 
+        if (!mounted) return;
+
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('Đổi mật khẩu thành công!'),
-                backgroundColor: Colors.green),
+              content: Text('✅ Đổi mật khẩu thành công!'),
+              backgroundColor: Colors.green,
+            ),
           );
 
-          // ✅ Xoá token và chuyển về LoginPage
           final prefs = await SharedPreferences.getInstance();
           await prefs.remove('token');
 
-          await Future.delayed(const Duration(seconds: 1));
-          if (mounted) {
+          Future.delayed(const Duration(seconds: 1), () {
             Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (_) => const LoginScreen()),
-              (route) => false,
+                  (route) => false,
             );
-          }
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Đổi mật khẩu thất bại'),
+              content: Text(result['message'] ?? '❌ Đổi mật khẩu thất bại'),
               backgroundColor: Colors.red,
             ),
           );

@@ -13,7 +13,6 @@ class API {
   static const String verifyOtp = '$baseUrl/user/xac-minh-otp';
   static const String updateAvatar = '$baseUrl/user/upload-avatar';
 
-
   // // 🛍️ Product APIs
   // static const String getCategory = '$baseUrl/categories';
   // static const String getProductByCategory = '$baseUrl/categories'; // /:id
@@ -37,13 +36,16 @@ class API {
 
 
   // 🛒 Cart APIs
-  static const String cart = '$baseUrl/cart'; // GET: Lấy giỏ
+  static const String cart = '$baseUrl/cart'; // GET: Lấy giỏ hàng
   static const String addToCart = '$baseUrl/cart/item'; // POST: Thêm sản phẩm
   static String updateCartItem(String idSanPham) =>
       '$baseUrl/cart/item/$idSanPham'; // PUT: Cập nhật số lượng
   static String deleteCartItem(String idSanPham) =>
       '$baseUrl/cart/item/$idSanPham'; // DELETE: Xoá sản phẩm
-  static const String clearCart = '$baseUrl/cart/clear'; // DELETE: Xoá toàn bộ
+  static const String clearCart = '$baseUrl/cart/clear'; // DELETE: Xoá toàn bộ giỏ
+  static String restoreCartItem(String idSanPham) =>
+      '$baseUrl/cart/item/$idSanPham/restore'; // PATCH: Khôi phục sản phẩm
+
 
 
   // 📦 Order APIs
@@ -55,19 +57,24 @@ class API {
   static const String rateProduct = '$baseUrl/order/rate';
   static const String submitReview = '$baseUrl/ratings';
 
-  // 📮 Address APIs
-  static String getAddresses(int userId) => '$baseUrl/address/$userId';
-  static const String addAddress = '$baseUrl/address';
-  static String updateAddress(int id) => '$baseUrl/address/$id';
-  static String deleteAddress(int id) => '$baseUrl/address/$id';
-  static String setDefaultAddress(int id) => '$baseUrl/address/default/$id';
+  /// 📮 Address APIs (khớp backend lấy userId từ token)
+  static const String getAddresses = '$baseUrl/address';              // GET /address
+  static const String addAddress = '$baseUrl/address';                // POST /address
+  static String updateAddress(int id) => '$baseUrl/address/$id';      // PUT /address/:id
+  static String deleteAddress(int id) => '$baseUrl/address/$id';      // DELETE /address/:id
+  static String setDefaultAddress(int id) =>                          // PATCH /address/default/:id
+  '$baseUrl/address/default/$id';
+
+
+
+
 
   // 🔘 Mã giảm giá
-  static const String getAllDiscounts = '$baseUrl/voucher';
-  static const String applyDiscount = '$baseUrl/voucher/apply';
-  static const String saveDiscount = '$baseUrl/voucher/save';
-  static const String getSavedDiscounts = '$baseUrl/voucher/saved';
-  static const String applySavedDiscount = '$baseUrl/voucher/apply-saved';
+  static const String getAllDiscounts    = '$baseUrl/voucher';              // GET /voucher
+  static const String saveDiscount       = '$baseUrl/voucher/save';         // POST /voucher/save
+  static const String getSavedDiscounts  = '$baseUrl/voucher/saved';        // GET /voucher/saved/:userId
+  static const String applyDiscount      = '$baseUrl/voucher/use';          // POST /voucher/use
+
 
   // ❤️ Favourite APIs
   static const String getFavourites = '$baseUrl/favorite';
@@ -76,6 +83,8 @@ class API {
       '$baseUrl/favorite/$userId/$productId';
   static String clearFavourites(int userId) =>
       '$baseUrl/favorite/user/$userId';
+  static String isFavorite(int productId, int userId) =>
+      '$baseUrl/favorite/is-favorite/$productId/$userId';
 
   // 💰 Payment APIs ✅
   static const String momoPayment = '$baseUrl/payment/momo/create';

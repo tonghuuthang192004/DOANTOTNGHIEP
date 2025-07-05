@@ -4,7 +4,7 @@ class AddressModel {
   final String name;
   final String phone;
   final String address;
-  bool isDefault;
+  final bool isDefault;
 
   AddressModel({
     required this.id,
@@ -17,21 +17,20 @@ class AddressModel {
 
   factory AddressModel.fromJson(Map<String, dynamic> json) {
     return AddressModel(
-      id: json['id'] ?? 0,
-      userId: json['id_nguoi_dung'] ?? 0,
-      name: json['ten_nguoi_nhan'] ?? '',
-      phone: json['so_dien_thoai'] ?? '',
-      address: json['dia_chi_day_du'] ?? '',
-      isDefault: json['mac_dinh'] == 1,
+      id: json['id'] as int? ?? 0,
+      userId: json['id_nguoi_dung'] as int? ?? 0,
+      name: json['ten_nguoi_dung'] as String? ?? '', // ✅ sửa tên field
+      phone: json['so_dien_thoai'] as String? ?? '',
+      address: json['dia_chi_day_du'] as String? ?? '',
+      isDefault: (json['mac_dinh'] ?? 0) == 1,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id_nguoi_dung': userId,
-      'ten_nguoi_nhan': name,
-      'so_dien_thoai': phone,
-      'dia_chi_day_du': address,
+      'ten_nguoi_dung': name.trim(), // ✅ sửa tên field
+      'so_dien_thoai': phone.trim(),
+      'dia_chi_day_du': address.trim(),
       'mac_dinh': isDefault ? 1 : 0,
     };
   }

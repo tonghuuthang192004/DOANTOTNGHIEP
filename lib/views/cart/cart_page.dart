@@ -25,7 +25,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   String? error;
 
   double get subtotal => cartItems.fold(
-      0.0, (sum, item) => sum + item.product.gia * item.quantity);
+      0.0, (sum, item) => sum + (item.product.gia * item.quantity));
   double get deliveryFee => 0.0;
   double get tax => subtotal * 0.0;
   double get total => subtotal + deliveryFee + tax;
@@ -46,16 +46,20 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadCart() async {
+    if (!mounted) return;
     setState(() {
       isLoading = true;
       error = null;
     });
     try {
       final items = await CartService.fetchCart();
+      if (!mounted) return;
       setState(() => cartItems = items);
     } catch (e) {
+      if (!mounted) return;
       setState(() => error = "❌ Không thể tải giỏ hàng: $e");
     } finally {
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -70,7 +74,7 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
         await _loadCart();
       }
     } catch (e) {
-      _showError('Lỗi cập nhật số lượng: $e');
+      _showError('❌ Lỗi cập nhật số lượng: $e');
     }
   }
 
@@ -79,18 +83,20 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
       await CartService.removeCartItem(cart.product.id.toString());
       await _loadCart();
     } catch (e) {
-      _showError('Lỗi xoá sản phẩm: $e');
+      _showError('❌ Lỗi xoá sản phẩm: $e');
     }
   }
 
   Future<void> _clearCart() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
     try {
       await CartService.clearCart();
       await _loadCart();
     } catch (e) {
-      _showError('Lỗi xoá toàn bộ giỏ hàng: $e');
+      _showError('❌ Lỗi xoá toàn bộ giỏ hàng: $e');
     } finally {
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -98,7 +104,10 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+      ),
     );
   }
 
@@ -123,7 +132,8 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error, color: Colors.red, size: 60),
+                const Icon(Icons.error,
+                    color: Colors.red, size: 60),
                 const SizedBox(height: 10),
                 Text(
                   'Không thể tải giỏ hàng 😢',
@@ -159,13 +169,15 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                           'Bạn có chắc muốn xoá toàn bộ giỏ hàng?'),
                       actions: [
                         TextButton(
-                            onPressed: () =>
-                                Navigator.pop(context, false),
-                            child: const Text('Huỷ')),
+                          onPressed: () =>
+                              Navigator.pop(context, false),
+                          child: const Text('Huỷ'),
+                        ),
                         ElevatedButton(
-                            onPressed: () =>
-                                Navigator.pop(context, true),
-                            child: const Text('Xoá')),
+                          onPressed: () =>
+                              Navigator.pop(context, true),
+                          child: const Text('Xoá'),
+                        ),
                       ],
                     ),
                   );
@@ -202,8 +214,9 @@ class _CartPageState extends State<CartPage> with TickerProviderStateMixin {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => const CheckoutPage()),
-                    ).then((_) => _loadCart()); // 🔄 Reload sau khi checkout
+                        builder: (context) => const CheckoutPage(),
+                      ),
+                    ).then((_) => _loadCart());
                   },
                 ),
             ],

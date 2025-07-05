@@ -21,22 +21,32 @@ class DeliveryInfoSection extends StatefulWidget {
 
 class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
   AddressModel? selectedAddress;
-  TextEditingController noteController = TextEditingController();
+  late TextEditingController noteController;
   bool isEditingNote = false;
   late String currentNote;
 
   @override
   void initState() {
     super.initState();
-    _loadDefaultAddress();
     currentNote = widget.note;
-    noteController.text = currentNote;
+    noteController = TextEditingController(text: currentNote);
+    _loadDefaultAddress();
+  }
+
+  @override
+  void dispose() {
+    noteController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDefaultAddress() async {
+    // Lấy userId để có thể gọi controller (nếu cần, hoặc dùng token trong service)
     final userId = await UserSession.getUserId();
+
     if (userId != null) {
-      final addresses = await AddressController().getAddresses(userId);
+      // Gọi getAddresses() không truyền tham số vì hàm không nhận userId
+      final addresses = await AddressController().getAddresses();
+
       if (addresses.isNotEmpty) {
         setState(() {
           selectedAddress = addresses.firstWhere(
@@ -49,59 +59,116 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
     }
   }
 
+
   void _openAddressDialog({AddressModel? initial}) {
     final nameController = TextEditingController(text: initial?.name ?? '');
     final phoneController = TextEditingController(text: initial?.phone ?? '');
     final addressController = TextEditingController(text: initial?.address ?? '');
     bool makeDefault = initial?.isDefault ?? true;
+    final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(initial == null ? "Thêm địa chỉ" : "Cập nhật địa chỉ"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameController, decoration: InputDecoration(labelText: 'Tên người nhận')),
-            TextField(controller: phoneController, decoration: InputDecoration(labelText: 'Số điện thoại')),
-            TextField(controller: addressController, decoration: InputDecoration(labelText: 'Địa chỉ')),
-            Row(
-              children: [
-                Checkbox(value: makeDefault, onChanged: (v) => setState(() => makeDefault = v!)),
-                const Text("Đặt làm mặc định"),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(initial == null ? "Thêm địa chỉ" : "Cập nhật địa chỉ"),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: const InputDecoration(labelText: 'Tên người nhận'),
+                        validator: (value) => (value == null || value.trim().isEmpty)
+                            ? 'Vui lòng nhập tên người nhận'
+                            : null,
+                      ),
+                      TextFormField(
+                        controller: phoneController,
+                        decoration: const InputDecoration(labelText: 'Số điện thoại'),
+                        keyboardType: TextInputType.phone,
+                        validator: (value) => (value == null || value.trim().isEmpty)
+                            ? 'Vui lòng nhập số điện thoại'
+                            : null,
+                      ),
+                      TextFormField(
+                        controller: addressController,
+                        decoration: const InputDecoration(labelText: 'Địa chỉ'),
+                        validator: (value) => (value == null || value.trim().isEmpty)
+                            ? 'Vui lòng nhập địa chỉ'
+                            : null,
+                      ),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: makeDefault,
+                            onChanged: (v) => setDialogState(() {
+                              makeDefault = v ?? false;
+                            }),
+                          ),
+                          const Text("Đặt làm mặc định"),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    nameController.dispose();
+                    phoneController.dispose();
+                    addressController.dispose();
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Huỷ"),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!formKey.currentState!.validate()) return;
+
+                    final userId = await UserSession.getUserId();
+                    if (userId == null) {
+                      // Bạn có thể show snackbar báo lỗi user chưa đăng nhập
+                      return;
+                    }
+
+                    final newAddress = AddressModel(
+                      id: initial?.id ?? 0,
+                      userId: userId,
+                      name: nameController.text.trim(),
+                      phone: phoneController.text.trim(),
+                      address: addressController.text.trim(),
+                      isDefault: makeDefault,
+                    );
+
+                    try {
+                      if (initial == null) {
+                        await AddressController().addAddress(newAddress);
+                      } else {
+                        await AddressController().updateAddress(newAddress);
+                      }
+                      Navigator.pop(context);
+                      nameController.dispose();
+                      phoneController.dispose();
+                      addressController.dispose();
+                      await _loadDefaultAddress();
+                    } catch (e) {
+                      // Có thể show snackbar lỗi lưu địa chỉ
+                      // Ví dụ: _showSnackBar('Lỗi lưu địa chỉ: $e');
+                    }
+                  },
+                  child: const Text("Lưu"),
+                ),
               ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Huỷ")),
-          ElevatedButton(
-            onPressed: () async {
-              final userId = await UserSession.getUserId();
-              if (userId != null) {
-                final newAddress = AddressModel(
-                  id: initial?.id ?? 0,
-                  userId: userId,
-                  name: nameController.text,
-                  phone: phoneController.text,
-                  address: addressController.text,
-                  isDefault: makeDefault,
-                );
-
-                if (initial == null) {
-                  await AddressController().addAddress(newAddress);
-                } else {
-                  await AddressController().updateAddress(newAddress);
-                }
-
-                Navigator.pop(context);
-                _loadDefaultAddress();
-              }
-            },
-            child: const Text("Lưu"),
-          )
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -113,7 +180,7 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(blurRadius: 10, color: Colors.black12)],
+        boxShadow: const [BoxShadow(blurRadius: 10, color: Colors.black12)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,8 +195,10 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
                     : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("${selectedAddress!.name} - ${selectedAddress!.phone}",
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      "${selectedAddress!.name} - ${selectedAddress!.phone}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Text(selectedAddress!.address),
                   ],
                 ),

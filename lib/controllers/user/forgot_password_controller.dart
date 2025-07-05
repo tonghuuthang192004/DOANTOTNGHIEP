@@ -8,24 +8,38 @@ class ForgotPasswordController extends ChangeNotifier {
   String? errorMessage;
   String? successMessage;
 
-  // 📨 Gửi email quên mật khẩu
+  /// 📨 Gửi email quên mật khẩu
   Future<void> sendForgotPasswordEmail(String email) async {
     isLoading = true;
     errorMessage = null;
     successMessage = null;
     notifyListeners();
 
-    final response = await _userService.forgotPassword(email);
+    try {
+      final response = await _userService.forgotPassword(email);
 
-    isLoading = false;
-    if (response['statusCode'] == 200) {
-      successMessage = response['body']['message'];
-    } else {
-      errorMessage = response['body']['error'] ?? 'Gửi email thất bại';
+      isLoading = false;
+
+      final body = response['body'];
+      if (response['statusCode'] == 200 && body != null) {
+        successMessage = body['message'] ?? 'Đã gửi email thành công';
+        print("✅ [ForgotPassword] Success: $successMessage");
+      } else {
+        errorMessage = body?['error'] ??
+            body?['message'] ??
+            'Gửi email thất bại';
+        print("❌ [ForgotPassword] Error: $errorMessage");
+      }
+    } catch (e) {
+      isLoading = false;
+      errorMessage = 'Đã xảy ra lỗi: $e';
+      print("❌ [ForgotPassword] Exception: $e");
     }
+
     notifyListeners();
   }
 
+  /// 🧹 Reset thông báo
   void clearMessages() {
     errorMessage = null;
     successMessage = null;

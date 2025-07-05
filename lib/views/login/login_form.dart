@@ -20,6 +20,7 @@ class _LoginFormState extends State<LoginForm> {
 
   bool _isLoading = false;
   String? _errorMessage;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -36,11 +37,18 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   void _handleLogin() async {
+    FocusScope.of(context).unfocus(); // 📱 Ẩn bàn phím
+
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
+    // 📧 Kiểm tra định dạng email
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (email.isEmpty || password.isEmpty) {
       setState(() => _errorMessage = 'Vui lòng nhập đầy đủ thông tin');
+      return;
+    } else if (!emailRegex.hasMatch(email)) {
+      setState(() => _errorMessage = 'Email không hợp lệ');
       return;
     }
 
@@ -73,7 +81,6 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -84,7 +91,10 @@ class _LoginFormState extends State<LoginForm> {
           if (_errorMessage != null)
             Padding(
               padding: EdgeInsets.only(bottom: Dimensions.height10),
-              child: Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+              child: Text(
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           _buildTextField(Icons.email, 'Email', controller: _emailController),
           SizedBox(height: Dimensions.height20),
@@ -109,7 +119,6 @@ class _LoginFormState extends State<LoginForm> {
               ),
             ),
           ),
-
           SizedBox(height: Dimensions.height20),
           SizedBox(
             width: double.infinity,
@@ -123,7 +132,7 @@ class _LoginFormState extends State<LoginForm> {
               ),
               onPressed: _isLoading ? null : _handleLogin,
               child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
+                  ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
                   : const Text('Đăng nhập', style: TextStyle(color: Colors.white)),
             ),
           ),
@@ -166,11 +175,24 @@ class _LoginFormState extends State<LoginForm> {
       ),
       child: TextField(
         controller: controller,
-        obscureText: obscureText,
+        obscureText: obscureText ? _obscurePassword : false,
         decoration: InputDecoration(
           icon: Icon(icon, color: Colors.deepOrange),
           border: InputBorder.none,
           hintText: hintText,
+          suffixIcon: obscureText
+              ? IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              color: Colors.grey,
+            ),
+            onPressed: () {
+              setState(() {
+                _obscurePassword = !_obscurePassword;
+              });
+            },
+          )
+              : null,
         ),
       ),
     );

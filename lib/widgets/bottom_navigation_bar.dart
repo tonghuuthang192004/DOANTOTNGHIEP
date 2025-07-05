@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-
-import '../models/user/user_token.dart';
+import '../services/user/user_session.dart';
 import '../views/Promotion/available_discount_page.dart';
 import '../views/cart/cart_page.dart';
 import '../views/favourite/favorite_page.dart';
 import '../views/home/home_screen.dart';
 import '../views/profile/profile_screen.dart';
-
+import '../views/login/login_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
@@ -23,15 +22,29 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
-    _loadUserId();
+    _loadUserSession();
   }
 
-  Future<void> _loadUserId() async {
-    final id = await UserToken.getUserId();
-    setState(() {
-      userId = id;
-      isLoading = false;
-    });
+  Future<void> _loadUserSession() async {
+    final id = await UserSession.getUserId();
+    if (id == null) {
+      // 👇 Nếu không tìm thấy user → quay về LoginScreen
+      Future.microtask(() {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+        );
+      });
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        userId = id;
+        isLoading = false;
+      });
+    }
   }
 
   void _onTap(int index) {
@@ -42,28 +55,31 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading || userId == null) {
+    if (isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (userId == null) {
+      return const Scaffold(
+        body: Center(child: Text('⚠️ Không tìm thấy phiên đăng nhập')),
       );
     }
 
     final List<Widget> pages = [
       HomeScreen(),
       AvailableDiscountPage(userId: userId!), // 🧾 Truyền userId
-      const FavoritePage(),
-      const CartPage(),
-      const ProfilePage(),
+      FavoritePage(),
+      CartPage(),
+      ProfilePage(),
     ];
 
     return Scaffold(
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
+          return FadeTransition(opacity: animation, child: child);
         },
         child: pages[_selectedIndex],
       ),

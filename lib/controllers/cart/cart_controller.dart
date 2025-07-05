@@ -34,7 +34,13 @@ class CartController extends ChangeNotifier {
     }
   }
 
-  /// ➕ Thêm sản phẩm vào giỏ
+  /// 🔄 Refresh giỏ hàng trong bộ nhớ (không gọi API)
+  void refreshCart(List<CartModel> updatedCart) {
+    _cartItems = updatedCart;
+    notifyListeners();
+  }
+
+  /// ➕ Thêm sản phẩm vào giỏ (tự khôi phục nếu soft-delete)
   Future<void> addProduct(ProductModel product, {int quantity = 1}) async {
     try {
       // Kiểm tra nếu sản phẩm đã có trong giỏ
@@ -47,12 +53,32 @@ class CartController extends ChangeNotifier {
         final newQuantity = existingItem.quantity + quantity;
         await CartService.updateQuantity(product.id.toString(), newQuantity);
       } else {
-        await CartService.addToCart(product, quantity: quantity);
+        try {
+          await CartService.addToCart(product, quantity: quantity);
+        } catch (e) {
+          // Nếu lỗi do soft-delete => khôi phục
+          if (e.toString().contains('soft-delete')) {
+            await restoreItem(product.id.toString(), quantity: quantity);
+          } else {
+            rethrow; // ném lỗi lại nếu không phải soft-delete
+          }
+        }
       }
 
       await loadCart();
     } catch (e) {
       error = "❌ Không thể thêm sản phẩm: $e";
+      notifyListeners();
+    }
+  }
+
+  /// ♻️ Khôi phục 1 sản phẩm đã xoá (soft-delete)
+  Future<void> restoreItem(String productId, {int quantity = 1}) async {
+    try {
+      await CartService.restoreCartItem(productId, quantity: quantity);
+      await loadCart();
+    } catch (e) {
+      error = "❌ Không thể khôi phục sản phẩm: $e";
       notifyListeners();
     }
   }
@@ -68,7 +94,7 @@ class CartController extends ChangeNotifier {
     }
   }
 
-  /// ❌ Xoá 1 sản phẩm
+  /// ❌ Xoá 1 sản phẩm (soft-delete)
   Future<void> removeItem(String productId) async {
     try {
       await CartService.removeCartItem(productId);
@@ -79,7 +105,7 @@ class CartController extends ChangeNotifier {
     }
   }
 
-  /// 🧹 Xoá toàn bộ giỏ hàng
+  /// 🧹 Xoá toàn bộ giỏ hàng (soft-delete)
   Future<void> clearCart() async {
     try {
       await CartService.clearCart();

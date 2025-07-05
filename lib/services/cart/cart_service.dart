@@ -89,4 +89,22 @@ class CartService {
       throw Exception("❌ Lỗi khi xoá toàn bộ giỏ hàng: ${response.body}");
     }
   }
+  static Future<void> restoreCartItem(String productId, {int quantity = 1}) async {
+    final token = await UserToken.getToken();
+    final url = Uri.parse(API.restoreCartItem(productId));
+
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({'so_luong': quantity}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('❌ Khôi phục sản phẩm thất bại: ${response.body}');
+    }
+  }
+
 }

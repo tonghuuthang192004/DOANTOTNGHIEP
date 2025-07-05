@@ -4,7 +4,7 @@ import '../../services/favourite/favorite_service.dart';
 class FavoriteController {
   List<ProductModel> favoriteProducts = [];
 
-  /// 📥 Load danh sách sản phẩm yêu thích từ SharedPreferences
+  /// 📥 Load danh sách sản phẩm yêu thích từ backend
   Future<List<ProductModel>> loadFavorites() async {
     try {
       final userId = await FavoriteService.getCurrentUserId();
@@ -18,15 +18,20 @@ class FavoriteController {
       favoriteProducts = [];
       print('❌ Lỗi khi tải danh sách yêu thích: $e');
     }
-
     return favoriteProducts;
   }
 
   /// ➕ Thêm sản phẩm vào yêu thích
   Future<bool> addToFavorites(int productId) async {
-    final success = await FavoriteService.addFavorite(productId);
+    final userId = await FavoriteService.getCurrentUserId();
+    if (userId == null) {
+      print('❌ User chưa đăng nhập');
+      return false;
+    }
+
+    final success = await FavoriteService.addFavorite(userId, productId);
     if (success) {
-      await loadFavorites(); // tự động gọi lại theo user hiện tại
+      await loadFavorites();
     }
     return success;
   }
@@ -34,18 +39,12 @@ class FavoriteController {
   /// ❌ Xoá một sản phẩm khỏi yêu thích
   Future<bool> removeFromFavorites(int productId) async {
     final userId = await FavoriteService.getCurrentUserId();
-    if (userId == null) return false;
-
-    final success = await FavoriteService.removeFavorite(userId, productId);
-    if (success) {
-      await loadFavorites();
+    if (userId == null) {
+      print('❌ User chưa đăng nhập');
+      return false;
     }
-    return success;
-  }
 
-  /// 🧹 Xoá toàn bộ yêu thích
-  Future<bool> clearAllFavorites() async {
-    final success = await FavoriteService.clearFavorites();
+    final success = await FavoriteService.removeFavorite(productId, userId);
     if (success) {
       await loadFavorites();
     }

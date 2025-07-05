@@ -1,121 +1,123 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+
 import '../../api/api_constants.dart';
 import '../../models/user/user_token.dart';
 import '../../models/user/user_model.dart';
+import '../../services/user/user_session.dart';
 
 class UpdateProfileController {
-  // ✅ Lấy thông tin người dùng hiện tại
+  /// ✅ Lấy thông tin người dùng hiện tại
   Future<UserModel?> getCurrentUserProfile() async {
-    final url = Uri.parse(API.getProfile);
     final token = await UserToken.getToken();
-
-    print('🚀 Token đang dùng: $token');
-
     if (token == null) {
-      print('⚠️ Token null, cần đăng nhập lại');
+      print('⚠️ [getProfile] Token null, cần đăng nhập lại');
       return null;
     }
 
     try {
       final response = await http.get(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse(API.getProfile),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
+      print('📦 [getProfile] Status: ${response.statusCode}');
       final data = jsonDecode(response.body);
       print('📦 [getProfile] Response: $data');
 
-      if (response.statusCode == 200 && data['data'] != null) {
-        return UserModel.fromJson(data['data']);
-      } else if (response.statusCode == 200 && data['user'] != null) {
-        return UserModel.fromJson(data['user']);
+      if (response.statusCode == 200 && (data['success'] == true || data['status'] == true)) {
+        final userJson = data['data'] ?? data['user'];
+        if (userJson != null) {
+          print('✅ [getProfile] User found');
+          return UserModel.fromJson(userJson);
+        }
       } else {
-        print('❌ Không tìm thấy data trong response');
+        print('❌ [getProfile] Lỗi response: ${data['message']}');
       }
     } catch (e) {
-      print('❌ Lỗi lấy thông tin người dùng: $e');
+      print('❌ [getProfile] Exception: $e');
     }
-
     return null;
   }
 
-
-  // ✅ Cập nhật thông tin và trả về cả trước & sau
-  Future<Map<String, dynamic>> updateProfile({
+  /// ✏️ Cập nhật tên và số điện thoại
+  Future<Map<String, dynamic>> updateProfileInfo({
     required String ten,
     required String soDienThoai,
-    required String gioiTinh,
-    String? ngaySinh, // 👈 thêm ngày sinh
-    String? avatar,
   }) async {
     final token = await UserToken.getToken();
-    final updateUrl = Uri.parse(API.updateProfile);
-    final profileUrl = Uri.parse(API.getProfile);
+    if (token == null) {
+      print('⚠️ [updateProfileInfo] Token null');
+      return {'success': false, 'message': 'Không tìm thấy token'};
+    }
 
     try {
-      // 🔹 B1: Lấy dữ liệu người dùng hiện tại
-      final currentUser = await getCurrentUserProfile();
-
-      // 🔹 B2: Gửi yêu cầu cập nhật thông tin
-      final updateBody = {
-        'ten': ten,
-        'so_dien_thoai': soDienThoai,
-        'gioi_tinh': gioiTinh,
-        if (ngaySinh != null) 'ngay_sinh': ngaySinh, // 👈 thêm vào body
-        if (avatar != null) 'avatar': avatar,
-      };
-
-      final updateRes = await http.put(
-        updateUrl,
+      final response = await http.post(
+        Uri.parse(API.updateProfile),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(updateBody),
+        body: jsonEncode({
+          'ten': ten,
+          'so_dien_thoai': soDienThoai,
+        }),
       );
 
-      final updateData = jsonDecode(updateRes.body);
+      print('📦 [updateProfileInfo] Status: ${response.statusCode}');
+      final data = jsonDecode(response.body);
+      print('📦 [updateProfileInfo] Response: $data');
 
-      if (updateRes.statusCode != 200) {
-        return {
-          'success': false,
-          'message': updateData['message'] ?? 'Cập nhật thất bại',
-        };
+      if (response.statusCode == 200 && data['success'] == true) {
+        print("✅ [updateProfileInfo] Update thành công: ${data['user']}");
+        await UserSession.setUser(data['user']); // Lưu vào local
+        return {'success': true, 'message': data['message']};
       }
-
-      // 🔹 B3: Lấy lại thông tin người dùng sau cập nhật
-      final afterRes = await http.get(
-        profileUrl,
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      final afterData = jsonDecode(afterRes.body);
-
-      UserModel? updatedUser;
-      if (afterRes.statusCode == 200 && afterData['data'] != null) {
-        updatedUser = UserModel.fromJson(afterData['data']);
-      }
-
-      return {
-        'success': true,
-        'message': updateData['message'] ?? 'Cập nhật thành công',
-        'before': currentUser,
-        'after': updatedUser,
-      };
+      return {'success': false, 'message': data['message'] ?? 'Cập nhật thất bại'};
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Lỗi kết nối: $e',
-      };
+      print('❌ [updateProfileInfo] Exception: $e');
+      return {'success': false, 'message': 'Lỗi cập nhật thông tin'};
+    }
+  }
+
+  /// 🖼 Upload avatar mới
+  Future<Map<String, dynamic>> uploadAvatar(File avatarFile) async {
+    final token = await UserToken.getToken();
+    if (token == null) {
+      print('⚠️ [uploadAvatar] Token null');
+      return {'success': false, 'message': 'Không tìm thấy token'};
+    }
+
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse(API.updateAvatar))
+        ..headers['Authorization'] = 'Bearer $token'
+        ..files.add(await http.MultipartFile.fromPath('avatar', avatarFile.path));
+
+      final streamedResponse = await request.send();
+      final responseBody = await streamedResponse.stream.bytesToString();
+      final data = jsonDecode(responseBody);
+
+      print('📦 [uploadAvatar] Status: ${streamedResponse.statusCode}');
+      print('📦 [uploadAvatar] Response: $data');
+
+      if (streamedResponse.statusCode == 200 && data['success'] == true) {
+        print("✅ [uploadAvatar] Upload thành công: ${data['avatar_url']}");
+
+        // Cập nhật avatar mới vào local user
+        final currentUser = await UserSession.getUser();
+        if (currentUser != null) {
+          currentUser['avatar'] = data['avatar_url'];
+          await UserSession.setUser(currentUser);
+        }
+
+        return {'success': true, 'message': data['message']};
+      }
+
+      return {'success': false, 'message': data['message'] ?? 'Upload avatar thất bại'};
+    } catch (e) {
+      print('❌ [uploadAvatar] Exception: $e');
+      return {'success': false, 'message': 'Lỗi upload avatar'};
     }
   }
 }
-
-
-
-
