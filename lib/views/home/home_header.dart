@@ -19,32 +19,32 @@ class HomeHeader extends StatelessWidget {
           children: [
             SizedBox(height: Dimensions.height10),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Giao hàng đến",
-                        style: TextStyle(
-                            fontSize: Dimensions.font16,
-                            color: Colors.white70)),
-                    SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.location_on,
-                            color: Colors.white, size: Dimensions.iconSize16),
-                        SizedBox(width: 4),
-                        Text("New York, USA",
-                            style: TextStyle(
-                                fontSize: Dimensions.font16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        Icon(Icons.keyboard_arrow_down,
-                            color: Colors.white, size: Dimensions.iconSize24),
-                      ],
-                    ),
-                  ],
-                ),
+                // Column(
+                //   crossAxisAlignment: CrossAxisAlignment.start,
+                //   children: [
+                //     Text("Giao hàng đến",
+                //         style: TextStyle(
+                //             fontSize: Dimensions.font16,
+                //             color: Colors.white70)),
+                //     SizedBox(height: 4),
+                //     Row(
+                //       children: [
+                //         Icon(Icons.location_on,
+                //             color: Colors.white, size: Dimensions.iconSize16),
+                //         SizedBox(width: 4),
+                //         Text("New York, USA",
+                //             style: TextStyle(
+                //                 fontSize: Dimensions.font16,
+                //                 fontWeight: FontWeight.bold,
+                //                 color: Colors.white)),
+                //         Icon(Icons.keyboard_arrow_down,
+                //             color: Colors.white, size: Dimensions.iconSize24),
+                //       ],
+                //     ),
+                //   ],
+                // ),
                 Container(
                   padding: EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -73,7 +73,7 @@ class HomeHeader extends StatelessWidget {
               ),
               child: TextFormField(
                   decoration: InputDecoration(
-                    hintText: "Tìm kiếm món ăn yêu thích...",
+                    hintText: "Tìm kiếm món ăn ...",
                     hintStyle: TextStyle(color: Colors.grey[500]),
                     border: InputBorder.none,
                     prefixIcon: Icon(Icons.search,
@@ -91,7 +91,6 @@ class HomeHeader extends StatelessWidget {
                     );
                   }
                 },
-
               ),
             ),
             SizedBox(height: Dimensions.height15),

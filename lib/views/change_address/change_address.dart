@@ -164,9 +164,19 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
           break;
         case 'delete':
           await _showLoading(() async {
-            await AddressService.deleteAddress(address.id);
-            _showSnackBar('🗑️ Xoá địa chỉ thành công');
-            await _loadAddresses();
+            try {
+              await AddressService.deleteAddress(address.id);
+              _showSnackBar('🗑️ Đã xoá địa chỉ thành công');
+              await _loadAddresses();
+            } catch (e) {
+              debugPrint('Xoá địa chỉ lỗi: $e');
+              String errorMsg = e.toString();
+              if (errorMsg.contains('mặc định')) {
+                _showSnackBar('⚠️ Không thể xoá địa chỉ mặc định', isError: true);
+              } else {
+                _showSnackBar('⚠️ Lỗi khi xoá địa chỉ', isError: true);
+              }
+            }
           });
           break;
       }
@@ -264,7 +274,7 @@ class _AddressManagementPageState extends State<AddressManagementPage> {
                     });
                     Navigator.pop(context);
                   } catch (e) {
-                    _showSnackBar('❌ Lỗi lưu địa chỉ: $e', isError: true);
+                    _showSnackBar('Lỗi lưu địa chỉ: $e', isError: true);
                   }
                 },
                 child: Text(address == null ? 'Thêm' : 'Cập nhật'),

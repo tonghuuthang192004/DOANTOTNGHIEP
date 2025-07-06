@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/order/order_model.dart';
 import '../../models/order/order_detail_model.dart';
 import '../../services/order/order_service.dart';
 import '../../utils/dimensions.dart';
@@ -13,7 +12,7 @@ class OrderDetailPage extends StatefulWidget {
 }
 
 class _OrderDetailPageState extends State<OrderDetailPage> {
-  OrderModel? order;
+  Map<String, dynamic>? orderInfo;
   List<OrderItemModel> items = [];
   bool isLoading = true;
 
@@ -29,37 +28,14 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       final result = await OrderService.fetchOrderDetail(widget.orderId);
       debugPrint('📥 Dữ liệu trả về từ fetchOrderDetail: $result');
 
-      if (result is Map<String, dynamic>) {
-        final orderData = result['order'];
-        final itemsData = result['items'];
+      final fetchedItems = result['items'] as List<OrderItemModel>;
+      final fetchedOrder = result['order'] as Map<String, dynamic>?;
 
-        debugPrint('📥 orderData type: ${orderData.runtimeType}');
-        debugPrint('📥 itemsData type: ${itemsData.runtimeType}');
-
-        if (itemsData is List<OrderItemModel>) {
-          items = itemsData;
-        } else {
-          throw Exception('❌ itemsData không đúng kiểu List<OrderItemModel>');
-        }
-
-        if (orderData == null) {
-          debugPrint('📥 Chỉ có danh sách sản phẩm, orderData == null');
-          setState(() {
-            order = null;
-            isLoading = false;
-          });
-        } else if (orderData is Map<String, dynamic>) {
-          debugPrint('📥 Có order và items');
-          order = OrderModel.fromJson(orderData);
-          setState(() {
-            isLoading = false;
-          });
-        } else {
-          throw Exception('❌ Dữ liệu order không đúng định dạng');
-        }
-      } else {
-        throw Exception('❌ Dữ liệu trả về không phải Map');
-      }
+      setState(() {
+        items = fetchedItems;
+        orderInfo = fetchedOrder;
+        isLoading = false;
+      });
     } catch (e) {
       debugPrint('❌ Lỗi khi tải chi tiết đơn hàng: $e');
       if (mounted) {
@@ -76,16 +52,18 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     Dimensions.init(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chi tiết ${_formatOrderCode(widget.orderId)}'),
+        title: Text('Thông tin chi tiết ${_formatOrderCode(widget.orderId)}'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
+          : items.isEmpty
+          ? const Center(child: Text('❌ Không có sản phẩm trong đơn hàng'))
           : Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildOrderInfo(), // Ẩn nếu order == null
+          _buildOrderInfo(),
           const Divider(height: 1, thickness: 1),
           Expanded(child: _buildProductList()),
           _buildTotalSection(),
@@ -95,9 +73,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   Widget _buildOrderInfo() {
-    if (order == null) {
-      return const SizedBox.shrink(); // ✅ Ẩn luôn phần này nếu không có order
+    if (orderInfo == null) {
+      return const SizedBox.shrink();
     }
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(Dimensions.width15),
@@ -106,7 +85,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '📦 Mã đơn: ${_formatOrderCode(order!.id)}',
+            '📦 Người nhận: ${orderInfo!['customerName'] ?? 'Không rõ'}',
             style: TextStyle(
               fontSize: Dimensions.font16,
               fontWeight: FontWeight.bold,
@@ -114,10 +93,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             ),
           ),
           SizedBox(height: Dimensions.height8),
-          _infoRow(Icons.payment, 'Thanh toán', order!.paymentMethod),
-          _infoRow(Icons.local_shipping, 'Trạng thái', order!.status),
-          if (order!.note != null && order!.note!.isNotEmpty)
-            _infoRow(Icons.note, 'Ghi chú', order!.note!),
+          _infoRow(Icons.phone, 'SĐT', orderInfo!['customerPhone'] ?? ''),
+          _infoRow(Icons.location_on, 'Địa chỉ', orderInfo!['shippingAddress'] ?? ''),
+          _infoRow(Icons.payment, 'Thanh toán', orderInfo!['paymentStatus'] ?? ''),
         ],
       ),
     );
@@ -174,8 +152,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               color: Colors.grey[300],
               width: Dimensions.width50,
               height: Dimensions.height50,
-              child:
-              const Icon(Icons.broken_image, color: Colors.grey),
+              child: const Icon(Icons.broken_image, color: Colors.grey),
             ),
           ),
         ),
@@ -206,8 +183,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   Widget _buildTotalSection() {
-    double total =
-    items.fold(0.0, (sum, item) => sum + item.total);
+    double total = items.fold(0.0, (sum, item) => sum + item.total);
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(Dimensions.width15),
@@ -219,8 +195,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text('Tổng cộng:',
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w600)),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
           Text(
             '${_formatCurrency(total)}đ',
             style: const TextStyle(

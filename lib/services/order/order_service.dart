@@ -46,36 +46,29 @@ class OrderService {
             .map(OrderItemModel.fromJson)
             .toList();
 
-        return {'order': null, 'items': parsedItems}; // ✅ trả về đúng kiểu
-      } else if (data is Map<String, dynamic>) {
-        final orderJson = data['order'];
-        final itemsJson = data['items'];
+        // 📌 Lấy info người mua từ item đầu tiên
+        final firstItem = parsedItems.isNotEmpty ? parsedItems.first : null;
 
-        final parsedItems = itemsJson is List
-            ? itemsJson
-            .whereType<Map<String, dynamic>>()
-            .map(OrderItemModel.fromJson)
-            .toList()
-            : <OrderItemModel>[];
-
+        final orderInfo = firstItem != null
+            ? {
+          'customerName': firstItem.customerName,
+          'customerPhone': firstItem.customerPhone,
+          'shippingAddress': firstItem.shippingAddress,
+          'paymentStatus': firstItem.paymentStatus,
+        }
+            : null;
         return {
-          'order': orderJson,
-          'items': parsedItems
+          'order': orderInfo,
+          'items': parsedItems,
         };
-      } else {
+      }
+      else {
         throw Exception('Dữ liệu data không đúng định dạng');
       }
     } else {
       throw Exception('Lỗi khi lấy chi tiết đơn hàng: ${res.body}');
     }
   }
-
-
-
-
-
-
-
 
   /// ❌ Hủy đơn hàng
   static Future<bool> cancelOrder(int orderId) async {

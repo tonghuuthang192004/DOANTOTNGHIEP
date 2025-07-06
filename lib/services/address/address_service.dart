@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import '../../api/api_constants.dart';
 import '../../models/address/address_model.dart';
@@ -84,8 +85,10 @@ class AddressService {
     print('📥 Response (${res.statusCode}): ${res.body}');
 
     if (res.statusCode != 200) {
-      throw Exception('❌ Lỗi xoá địa chỉ: ${res.body}');
+      debugPrint('Xóa địa chỉ thất bại: ${res.body}');
+      throw Exception('Không thể xóa địa chỉ. Server trả về lỗi.');
     }
+
   }
 
   static Future<void> setDefaultAddress(int id) async {

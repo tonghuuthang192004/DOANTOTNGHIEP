@@ -95,6 +95,4 @@ class API {
   static const String momoPayment = '$baseUrl/order/create';
   static const String confirmCod = '$baseUrl/payment/confirm-cod';
 
-
-
 }
