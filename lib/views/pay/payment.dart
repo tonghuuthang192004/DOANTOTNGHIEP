@@ -22,21 +22,21 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late final AnimationController _animationController;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
 
   String selectedPaymentMethod = 'momo';
   bool isProcessing = false;
 
-  double subtotal = 0;
-  double discountAmount = 0;
+  double subtotal = 0.0;
+  double discountAmount = 0.0;
   double get totalAmount => (subtotal - discountAmount).clamp(0, double.infinity);
 
   List<CartModel> cartItems = [];
   DiscountModel? selectedDiscount;
 
-  Map<String, String> orderData = {
+  final Map<String, String> orderData = {
     'address': '',
     'note': '',
   };
@@ -47,16 +47,17 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
+    )..forward();
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
-
-    _animationController.forward();
 
     _loadDefaultAddress();
     _loadCartData();
@@ -69,11 +70,7 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
   }
 
   Future<void> _loadDefaultAddress() async {
-    final userId = await UserSession.getUserId();
-    if (userId == null) return;
-
     try {
-      // Gọi getAddresses không truyền tham số nếu hàm không nhận userId
       final addressList = await AddressController().getAddresses();
       if (addressList.isNotEmpty) {
         final defaultAddress = addressList.firstWhere(
@@ -87,30 +84,24 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
         });
       }
     } catch (e) {
-      print('❌ Lỗi tải địa chỉ: $e');
+      debugPrint('❌ Lỗi tải địa chỉ: $e');
     }
   }
 
   Future<void> _loadCartData() async {
-    final userId = await UserSession.getUserId();
-    if (userId == null) return;
-
     try {
       final cartList = await CartService.fetchCart();
 
-      double newSubtotal = cartList.fold(
-        0,
-            (sum, item) => sum + item.product.gia * item.quantity,
+      final newSubtotal = cartList.fold<double>(
+        0.0,
+            (sum, item) => sum + (item.product.gia * item.quantity),
       );
 
-      double newDiscount = 0;
-      if (selectedDiscount != null) {
-        if (selectedDiscount!.loai == 'phan_tram') {
-          newDiscount = newSubtotal * (selectedDiscount!.giaTri / 100);
-        } else {
-          newDiscount = selectedDiscount!.giaTri.toDouble();
-        }
-      }
+      final newDiscount = selectedDiscount != null
+          ? (selectedDiscount!.loai == 'phan_tram'
+          ? newSubtotal * (selectedDiscount!.giaTri / 100)
+          : selectedDiscount!.giaTri.toDouble())
+          : 0.0;
 
       if (!mounted) return;
       setState(() {
@@ -119,7 +110,7 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
         discountAmount = newDiscount;
       });
     } catch (e) {
-      print("❌ Lỗi khi load giỏ hàng: $e");
+      debugPrint("❌ Lỗi khi load giỏ hàng: $e");
     }
   }
 
@@ -130,64 +121,65 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
     final selected = await Navigator.push<DiscountModel?>(
       context,
       MaterialPageRoute(
-        builder: (_) => SavedDiscountPage(userId: userId, isSelectionMode: true),
+        builder: (_) => SavedDiscountPage(
+          userId: userId,
+          isSelectionMode: true,
+        ),
       ),
     );
 
-    if (selected != null) {
-      if (!mounted) return;
+    if (selected != null && mounted) {
       setState(() {
         selectedDiscount = selected;
-        if (selected.loai == 'phan_tram') {
-          discountAmount = subtotal * (selected.giaTri / 100);
-        } else {
-          discountAmount = selected.giaTri.toDouble();
-        }
+        discountAmount = selected.loai == 'phan_tram'
+            ? subtotal * (selected.giaTri / 100)
+            : selected.giaTri.toDouble();
       });
     }
   }
 
   Future<void> _handlePlaceOrder() async {
-    if (orderData['address'] == null || orderData['address']!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("⚠️ Vui lòng nhập địa chỉ giao hàng")),
-      );
+    if ((orderData['address'] ?? '').isEmpty) {
+      _showErrorSnack("⚠️ Vui lòng nhập địa chỉ giao hàng");
+      return;
+    }
+
+    if (cartItems.isEmpty) {
+      _showErrorSnack("⚠️ Giỏ hàng trống");
       return;
     }
 
     setState(() => isProcessing = true);
 
     try {
-      final userId = await UserSession.getUserId();
-      if (userId == null) throw Exception('User chưa đăng nhập');
-
-      // Lấy danh sách địa chỉ để tìm id theo địa chỉ đã chọn
       final addresses = await AddressController().getAddresses();
-      final address = addresses.firstWhere((e) => e.address == orderData['address']);
-      final addressId = address.id;
-
-      // Tạo đơn hàng
-      final int orderId = await OrderService.checkout(
-        addressId: addressId,
-        paymentMethod: selectedPaymentMethod,
-        note: orderData['note']?.trim() ?? '',
+      final address = addresses.firstWhere(
+            (e) => e.address == orderData['address'],
+        orElse: () => throw Exception('❌ Không tìm thấy địa chỉ'),
       );
 
-      // Lấy chi tiết đơn hàng để tính tổng tiền
-      final orderDetail = await OrderService.fetchOrderDetail(orderId);
-      final totalPrice = orderDetail.fold<double>(0, (sum, item) => sum + item.total);
+      final result = await OrderService.checkout(
+        addressId: address.id,
+        paymentMethod: selectedPaymentMethod,
+        note: orderData['note']?.trim(),
+      );
 
+      final orderId = result['orderId'];
+      debugPrint('✅ Đặt hàng thành công. ID đơn: $orderId');
       if (selectedPaymentMethod == 'momo') {
-        final payUrl = await OrderService.createMomoPayment(orderId, totalPrice);
+        final payUrl = result['payUrl']; // 🟢 Dùng payUrl từ checkout trả về
+        debugPrint("🌐 [payUrl từ API]: $payUrl"); // 👈 Log ra console
         if (payUrl != null && mounted) {
-          final result = await Navigator.push(
+          final paymentResult = await Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => WebViewPaymentPage(url: payUrl)),
           );
 
-          if (result == true && mounted) {
+          if (paymentResult == true && mounted) {
             await CartService.clearCart();
             _showSuccessDialog("✅ Thanh toán MoMo thành công");
+          } else {
+            _showErrorSnack("❌ Thanh toán bị hủy hoặc thất bại");
           }
         } else {
           _showErrorSnack("❌ Không thể tạo thanh toán MoMo");
@@ -195,18 +187,18 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
       } else if (selectedPaymentMethod == 'cod') {
         final codConfirmed = await OrderService.confirmCodPayment(orderId);
         if (codConfirmed && mounted) {
+          await CartService.clearCart();
           _showSuccessDialog("✅ Đặt hàng COD thành công");
         } else {
-          _showErrorSnack("❌ Xác nhận thanh toán COD thất bại");
+          _showErrorSnack("❌ Xác nhận COD thất bại");
         }
       }
+
     } catch (e) {
-      print("❌ Lỗi khi đặt hàng: $e");
+      debugPrint("❌ Lỗi khi đặt hàng: $e");
       _showErrorSnack("❌ ${e.toString()}");
     } finally {
-      if (mounted) {
-        setState(() => isProcessing = false);
-      }
+      if (mounted) setState(() => isProcessing = false);
     }
   }
 
@@ -317,9 +309,10 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
         total: totalAmount,
         isProcessing: isProcessing,
         onPlaceOrder: _handlePlaceOrder,
-        paymentMethodName: selectedPaymentMethod == 'momo' ? 'MoMo' : 'COD',
-        paymentMethodIcon:
-        selectedPaymentMethod == 'momo' ? Icons.account_balance_wallet : Icons.money,
+        paymentMethodName: selectedPaymentMethod == 'momo' ? 'Ví MoMo' : 'COD',
+        paymentMethodIcon: selectedPaymentMethod == 'momo'
+            ? Icons.account_balance_wallet
+            : Icons.money,
         paymentColor: selectedPaymentMethod == 'momo' ? Colors.pink : Colors.orange,
         paymentBgColor: selectedPaymentMethod == 'momo'
             ? Colors.pink.withOpacity(0.1)

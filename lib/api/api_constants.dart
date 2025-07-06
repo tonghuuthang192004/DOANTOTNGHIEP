@@ -49,13 +49,18 @@ class API {
 
 
   // 📦 Order APIs
-  static const String checkout = '$baseUrl/order/checkout';
-  static const String myOrders = '$baseUrl/order/my';
+  static const String checkout = '$baseUrl/order/create';
+  static const String myOrders = '$baseUrl/order';
+  static const String orderHistory = '$baseUrl/order/lich-su';
   static String orderDetail(int id) => '$baseUrl/order/$id';
   static String cancelOrder(int id) => '$baseUrl/order/$id/cancel';
   static String reorder(int id) => '$baseUrl/order/$id/reorder';
-  static const String rateProduct = '$baseUrl/order/rate';
-  static const String submitReview = '$baseUrl/ratings';
+
+// ⭐ Đánh giá sản phẩm - sửa thành đúng đường dẫn backend
+  static String rateProduct(int productId) => '$baseUrl/order/$productId/review';
+// 📥 Lấy danh sách đánh giá của 1 sản phẩm
+  static String reviewProduct(int productId) => '$baseUrl/order/products/$productId/reviews';
+
 
   /// 📮 Address APIs (khớp backend lấy userId từ token)
   static const String getAddresses = '$baseUrl/address';              // GET /address
@@ -86,9 +91,10 @@ class API {
   static String isFavorite(int productId, int userId) =>
       '$baseUrl/favorite/is-favorite/$productId/$userId';
 
-  // 💰 Payment APIs ✅
-  static const String momoPayment = '$baseUrl/payment/momo/create';
-  static const String confirmCod = '$baseUrl/payment/cod';
+  // 💰 Payment APIs
+  static const String momoPayment = '$baseUrl/order/create';
+  static const String confirmCod = '$baseUrl/payment/confirm-cod';
+
 
 
 }

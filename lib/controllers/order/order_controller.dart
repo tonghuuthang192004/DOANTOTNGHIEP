@@ -4,7 +4,6 @@ import '../../models/order/order_model.dart';
 import '../../services/order/order_service.dart';
 
 class OrderController {
-  /// 🔄 Lấy danh sách đơn hàng của người dùng, có thể lọc theo trạng thái
   Future<List<OrderModel>> fetchOrders({String? status}) async {
     try {
       return await OrderService.fetchOrders(status: status);
@@ -14,7 +13,15 @@ class OrderController {
     }
   }
 
-  /// ❌ Hủy đơn hàng theo ID
+  Future<Map<String, dynamic>> fetchOrderDetail(int orderId) async {
+    try {
+      return await OrderService.fetchOrderDetail(orderId);
+    } catch (e) {
+      debugPrint('❌ [OrderController] fetchOrderDetail error: $e');
+      return {'order': null, 'items': <OrderItemModel>[]};
+    }
+  }
+
   Future<bool> cancelOrder(int orderId) async {
     try {
       return await OrderService.cancelOrder(orderId);
@@ -24,7 +31,6 @@ class OrderController {
     }
   }
 
-  /// 🔁 Mua lại đơn hàng cũ
   Future<bool> reorder(int orderId) async {
     try {
       return await OrderService.reorder(orderId);
@@ -34,31 +40,70 @@ class OrderController {
     }
   }
 
-  /// 📋 Lấy chi tiết đơn hàng theo ID
-  Future<List<OrderItemModel>> fetchOrderDetail(int orderId) async {
-    try {
-      return await OrderService.fetchOrderDetail(orderId);
-    } catch (e) {
-      debugPrint('❌ [OrderController] fetchOrderDetail error: $e');
-      return [];
-    }
-  }
-
-  /// ⭐ Gửi đánh giá sản phẩm
-  Future<bool> submitRating({
+  Future<void> submitRating({
     required int productId,
     required int score,
     String? comment,
   }) async {
     try {
-      return await OrderService.rateProduct(
+      final success = await OrderService.rateProduct(
         productId: productId,
         score: score,
         comment: comment,
       );
+      if (!success) {
+        throw Exception('Đánh giá thất bại');
+      }
     } catch (e) {
       debugPrint('❌ [OrderController] submitRating error: $e');
-      return false;
+      rethrow; // cho UI biết lỗi để xử lý
+    }
+  }
+
+
+  Future<List<Map<String, dynamic>>> fetchProductReviews(int productId) async {
+    try {
+      return await OrderService.fetchProductReviews(productId);
+    } catch (e) {
+      debugPrint('❌ [OrderController] fetchProductReviews error: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkout({
+    required int addressId,
+    required String paymentMethod,
+    String? note,
+  }) async {
+    try {
+      debugPrint('📦 [OrderController] checkout gọi: addressId=$addressId, payment=$paymentMethod');
+      return await OrderService.checkout(
+        addressId: addressId,
+        paymentMethod: paymentMethod,
+        note: note ?? '',
+      );
+    } catch (e) {
+      debugPrint('❌ [OrderController] checkout error: $e');
+      return null;
+    }
+  }
+
+  Future<double> getCartTotalPrice() async {
+    try {
+      return await OrderService.getCartTotalPrice();
+    } catch (e) {
+      debugPrint('❌ [OrderController] getCartTotalPrice error: $e');
+      return 0.0;
+    }
+  }
+
+  /// 📥 Lấy lịch sử đơn hàng
+  Future<List<OrderModel>> fetchOrderHistory() async {
+    try {
+      return await OrderService.fetchOrderHistory();
+    } catch (e) {
+      debugPrint('❌ [OrderController] fetchOrderHistory error: $e');
+      return [];
     }
   }
 }

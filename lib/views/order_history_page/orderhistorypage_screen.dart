@@ -14,7 +14,14 @@ class OrderHistoryPage extends StatefulWidget {
 
 class _OrderHistoryPageState extends State<OrderHistoryPage> {
   String selectedFilter = 'Tất cả';
-  final List<String> filters = ['Tất cả', 'Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao hàng', 'Hoàn thành', 'Đã huỷ'];
+  final List<String> filters = [
+    'Tất cả',
+    'Chờ xác nhận',
+    'Đang chuẩn bị',
+    'Đang giao hàng',
+    'Hoàn thành',
+    'Đã huỷ'
+  ];
   List<OrderModel> orders = [];
   bool isLoading = false;
 
@@ -27,25 +34,46 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Future<void> _loadOrders() async {
     setState(() => isLoading = true);
     try {
-      final fetched = await OrderService.fetchOrders(
-        status: selectedFilter == 'Tất cả' ? null : selectedFilter,
-      );
+      final fetched = selectedFilter == 'Tất cả'
+          ? await OrderService.fetchOrderHistory()
+          : await OrderService.fetchOrders(status: selectedFilter);
       setState(() => orders = fetched);
     } catch (e) {
-      print('❌ Lỗi khi tải đơn hàng: $e');
+      debugPrint('❌ Lỗi khi tải đơn hàng: $e');
+      _showSnackBar('⚠️ Không thể tải lịch sử đơn hàng');
     }
     setState(() => isLoading = false);
+  }
+
+  void _showSnackBar(String message, {Color? color}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
+  void _navigateToDetail(int orderId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => OrderDetailPage(orderId: orderId)),
+    );
+  }
+
+  void _navigateToReview(int orderId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ProductReviewPage(orderId: orderId)),
+    );
   }
 
   Future<void> _cancelOrder(int orderId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xác nhận'),
-        content: const Text('Bạn có chắc muốn huỷ đơn hàng này không?'),
+      builder: (_) => AlertDialog(
+        title: const Text('Huỷ đơn hàng?'),
+        content: const Text('Bạn có chắc chắn muốn huỷ đơn hàng này không?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Không')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Huỷ đơn')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Huỷ')),
         ],
       ),
     );
@@ -53,14 +81,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     if (confirmed == true) {
       final success = await OrderService.cancelOrder(orderId);
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Huỷ đơn hàng thành công')),
-        );
+        _showSnackBar('✅ Huỷ đơn thành công', color: Colors.green);
         _loadOrders();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('❌ Không thể huỷ đơn hàng')),
-        );
+        _showSnackBar('❌ Huỷ đơn thất bại', color: Colors.red);
       }
     }
   }
@@ -68,27 +92,31 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Future<void> _reorder(int orderId) async {
     final success = await OrderService.reorder(orderId);
     if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('🛒 Đã thêm lại các sản phẩm vào giỏ hàng')),
-      );
+      _showSnackBar('🛒 Các sản phẩm đã được thêm lại giỏ hàng', color: Colors.green);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Mua lại thất bại')),
-      );
+      _showSnackBar('❌ Mua lại thất bại', color: Colors.red);
     }
   }
 
-  void _navigateToReview(int orderId) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ProductReviewPage(orderId: orderId)),
-    );
+  bool _canCancel(String status) {
+    return ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao hàng'].contains(status);
   }
 
-  bool canCancelOrder(String status) {
-    return status == 'Chờ xác nhận' ||
-        status == 'Đang chuẩn bị' ||
-        status == 'Đang giao hàng';
+  (Color, IconData) _getStatusStyle(String status) {
+    switch (status) {
+      case 'Hoàn thành':
+        return (Colors.green, Icons.check_circle);
+      case 'Đang giao hàng':
+        return (Colors.blue, Icons.local_shipping);
+      case 'Đang chuẩn bị':
+        return (Colors.deepOrange, Icons.kitchen);
+      case 'Chờ xác nhận':
+        return (Colors.orange, Icons.access_time);
+      case 'Đã huỷ':
+        return (Colors.red, Icons.cancel);
+      default:
+        return (Colors.grey, Icons.help_outline);
+    }
   }
 
   @override
@@ -107,11 +135,11 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : orders.isEmpty
-                ? const Center(child: Text('Không có đơn hàng nào'))
+                ? const Center(child: Text('📦 Không có đơn hàng nào'))
                 : ListView.builder(
-              itemCount: orders.length,
               padding: EdgeInsets.all(Dimensions.width15),
-              itemBuilder: (context, index) => _buildOrderCard(orders[index]),
+              itemCount: orders.length,
+              itemBuilder: (_, index) => _buildOrderCard(orders[index]),
             ),
           ),
         ],
@@ -121,26 +149,24 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   Widget _buildFilterChips() {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: Dimensions.height10),
+      padding: EdgeInsets.symmetric(vertical: Dimensions.height8),
       height: Dimensions.height50,
-      child: ListView.builder(
+      child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.symmetric(horizontal: Dimensions.width10),
         itemCount: filters.length,
-        itemBuilder: (context, index) {
+        separatorBuilder: (_, __) => SizedBox(width: Dimensions.width8),
+        itemBuilder: (_, index) {
           final filter = filters[index];
           final isSelected = selectedFilter == filter;
-          return Padding(
-            padding: EdgeInsets.only(right: Dimensions.width10),
-            child: ChoiceChip(
-              label: Text(filter),
-              selected: isSelected,
-              selectedColor: Colors.orange.shade100,
-              onSelected: (_) {
-                setState(() => selectedFilter = filter);
-                _loadOrders();
-              },
-            ),
+          return ChoiceChip(
+            label: Text(filter),
+            selected: isSelected,
+            selectedColor: Colors.orange.shade200,
+            onSelected: (_) {
+              setState(() => selectedFilter = filter);
+              _loadOrders();
+            },
           );
         },
       ),
@@ -148,39 +174,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   }
 
   Widget _buildOrderCard(OrderModel order) {
-    Color statusColor;
-    IconData statusIcon;
-
-    switch (order.status) {
-      case 'Hoàn thành':
-        statusColor = Colors.green;
-        statusIcon = Icons.check_circle;
-        break;
-      case 'Đang giao hàng':
-        statusColor = Colors.blue;
-        statusIcon = Icons.local_shipping;
-        break;
-      case 'Đang chuẩn bị':
-        statusColor = Colors.deepOrangeAccent;
-        statusIcon = Icons.kitchen;
-        break;
-      case 'Chờ xác nhận':
-        statusColor = Colors.orange;
-        statusIcon = Icons.access_time;
-        break;
-      case 'Đã huỷ':
-        statusColor = Colors.red;
-        statusIcon = Icons.cancel;
-        break;
-      default:
-        statusColor = Colors.grey;
-        statusIcon = Icons.help;
-    }
+    final (statusColor, statusIcon) = _getStatusStyle(order.status);
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.radius12)),
-      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Dimensions.radius12),
+      ),
       margin: EdgeInsets.only(bottom: Dimensions.height12),
+      elevation: 3,
       child: Padding(
         padding: EdgeInsets.all(Dimensions.width12),
         child: Column(
@@ -190,34 +191,40 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(order.orderCode, style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.bold)),
+                Text(
+                  order.orderCode,
+                  style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.bold),
+                ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(Dimensions.radius20),
                   ),
                   child: Row(
                     children: [
-                      Icon(statusIcon, color: statusColor, size: 16),
+                      Icon(statusIcon, size: 16, color: statusColor),
                       const SizedBox(width: 4),
-                      Text(order.status, style: TextStyle(color: statusColor)),
+                      Text(
+                        order.status,
+                        style: TextStyle(color: statusColor, fontSize: Dimensions.font14),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-            SizedBox(height: Dimensions.height10),
+            SizedBox(height: Dimensions.height8),
             // Date & Total
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
                 const SizedBox(width: 6),
-                Text(order.formattedDate),
+                Text(order.formattedDate, style: TextStyle(fontSize: Dimensions.font14)),
                 const Spacer(),
                 Text(
                   'Tổng: ${order.formattedPrice}đ',
-                  style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: Dimensions.font14),
                 ),
               ],
             ),
@@ -227,29 +234,17 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => OrderDetailPage(orderId: order.id),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.remove_red_eye, color: Colors.blue),
-                  label: const Text(
-                    'Xem chi tiết',
-                    style: TextStyle(color: Colors.blue),
-                  ),
+                  onPressed: () => _navigateToDetail(order.id),
+                  icon: const Icon(Icons.visibility, color: Colors.blue),
+                  label: const Text('Chi tiết', style: TextStyle(color: Colors.blue)),
                 ),
-
-                if (canCancelOrder(order.status))
+                if (_canCancel(order.status))
                   TextButton.icon(
                     onPressed: () => _cancelOrder(order.id),
                     icon: const Icon(Icons.cancel, color: Colors.red),
-                    label: const Text('Huỷ đơn', style: TextStyle(color: Colors.red)),
+                    label: const Text('Huỷ', style: TextStyle(color: Colors.red)),
                   ),
-
-                if (order.status == 'Hoàn thành') ...[
+                if (order.status == 'Hoàn Thành') ...[
                   TextButton.icon(
                     onPressed: () => _reorder(order.id),
                     icon: const Icon(Icons.shopping_cart, color: Colors.green),
@@ -257,7 +252,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   ),
                   TextButton.icon(
                     onPressed: () => _navigateToReview(order.id),
-                    icon: const Icon(Icons.star_rate, color: Colors.orange),
+                    icon: const Icon(Icons.star, color: Colors.orange),
                     label: const Text('Đánh giá', style: TextStyle(color: Colors.orange)),
                   ),
                 ],

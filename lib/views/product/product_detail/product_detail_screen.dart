@@ -1,15 +1,20 @@
+
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../services/product/product_service.dart';
-import '../../../services/cart/cart_service.dart';
-import '../../../utils/dimensions.dart';
+import 'package:frontendtn1/views/product/product_detail/product_image_appbar.dart';
+import 'package:frontendtn1/views/product/product_detail/product_info_section.dart';
+import 'package:frontendtn1/views/product/product_detail/product_review_section.dart';
+import 'package:frontendtn1/views/product/product_detail/quantity_selector.dart';
+import 'package:frontendtn1/views/product/product_detail/related_product_list.dart';
+
 import '../../../models/product/product_model.dart';
+import '../../../services/cart/cart_service.dart';
+import '../../../services/product/product_service.dart';
+import '../../../utils/dimensions.dart';
 import '../../cart/cart_page.dart';
 import '../../pay/payment.dart';
 import 'bottom_bar_actions.dart';
-import 'product_image_appbar.dart';
-import 'product_info_section.dart';
-import 'quantity_selector.dart';
-import 'related_product_list.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
@@ -92,6 +97,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     },
                   ),
                   SizedBox(height: Dimensions.height20),
+                  // 👇 Thêm phần đánh giá sản phẩm
+                  ProductReviewSection(
+                    productId: widget.product?['id'],
+                  ),
                   isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : RelatedProductList(products: relatedProducts),
