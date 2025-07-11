@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:frontendtn1/models/discount/discount_model.dart';
+import 'package:frontendtn1/services/discount/discount_service.dart';
 import 'package:http/http.dart' as http;
 import '../../api/api_constants.dart';
 import '../../models/cart/cart_model.dart';
 import '../../models/order/order_model.dart';
 import '../../models/order/order_detail_model.dart';
 import '../../models/user/user_token.dart';
+import '../cart/cart_service.dart';
 import '../user/user_session.dart';
 
 class OrderService {
@@ -17,20 +20,50 @@ class OrderService {
       'Authorization': 'Bearer $token',
       if (isJson) 'Content-Type': 'application/json',
     };
-  }
-
+  }/// 📦 Lấy danh sách đơn hàng
   /// 📦 Lấy danh sách đơn hàng
-  static Future<List<OrderModel>> fetchOrders({String? status}) async {
-    final headers = await getAuthHeader();
-    final url = Uri.parse('${API.myOrders}${status != null ? '?status=$status' : ''}');
-    final res = await http.get(url, headers: headers);
-    if (res.statusCode == 200) {
-      final List data = jsonDecode(res.body)['data'] ?? [];
-      return data.map((e) => OrderModel.fromJson(e)).toList();
-    } else {
-      throw Exception('❌ Lỗi khi tải đơn hàng: ${res.body}');
+  /// 📦 Lấy danh sách đơn hàng
+  static Future<List<OrderModel>> fetchOrders({String? trang_thai, required int userId}) async {
+    try {
+      final headers = await getAuthHeader();
+
+      // Clean 'trang_thai' value to ensure no quotes are added
+      final cleanTrangThai = trang_thai?.replaceAll("'", "");
+
+      // Check if trang_thai is valid and set the query parameters accordingly
+      final queryParams = {
+        if (cleanTrangThai != null && cleanTrangThai.isNotEmpty) 'trang_thai': cleanTrangThai,
+      };
+
+      // Build the final URL, making sure 'trang_thai' is included if it's not empty
+      final url = Uri.parse('${API.myOrders}?${Uri(queryParameters: queryParams).query}');
+
+      // Log the URL to check correctness
+      debugPrint('Request URL: $url');
+
+      // Make the GET request
+      final res = await http.get(url, headers: headers);
+
+      print('Response status: ${res.statusCode}');
+      print('Response body: ${res.body}');
+
+      if (res.statusCode == 200) {
+        // Parse the response body: use the correct key 'orders'
+        final List data = jsonDecode(res.body)['orders'] ?? [];
+        return data.map((e) => OrderModel.fromJson(e)).toList();
+      } else {
+        throw Exception('❌ Lỗi khi tải đơn hàng: ${res.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ [OrderController] fetchOrders error: $e');
+      rethrow;
     }
   }
+
+
+
+
+
 
   static Future<Map<String, dynamic>> fetchOrderDetail(int orderId) async {
     final headers = await getAuthHeader();
@@ -123,24 +156,77 @@ class OrderService {
       throw Exception('❌ Không thể tải đánh giá sản phẩm: $e');
     }
   }
-
-
-  /// 🛒 Đặt hàng
   static Future<Map<String, dynamic>> checkout({
     required int addressId,
     required String paymentMethod,
     String? note,
   }) async {
+    // Lấy thông tin giỏ hàng từ CartService
+    List<CartModel> cartItems = await CartService.fetchCart();
+    List<DiscountModel> disItem = await DiscountService.getAllDiscounts();
+
+    if (cartItems.isEmpty) {
+      debugPrint('❌ Giỏ hàng trống.');
+      throw Exception('Giỏ hàng của bạn trống, vui lòng thêm sản phẩm vào giỏ hàng.');
+    }
+
+    // Lấy id_nguoi_dung từ UserSession
+    final userId = await UserSession.getUserId();
+
+    // Nếu không lấy được id_nguoi_dung, ném lỗi
+    if (userId == null) {
+      debugPrint('❌ Không lấy được ID người dùng.');
+      throw Exception('Vui lòng đăng nhập để tiếp tục.');
+    }
+
+    // Chuyển giỏ hàng thành danh sách chi tiết sản phẩm
+    List<Map<String, dynamic>> orderDetails = cartItems.map((item) {
+      return {
+        'id_san_pham': item.product.id,  // Đảm bảo tên trường chính xác là id_san_pham
+        'so_luong': item.quantity,        // Đảm bảo tên trường là so_luong
+        'ghi_chu': note ?? '',           // Thêm ghi chú nếu có
+      };
+    }).toList();
+
+    // Kiểm tra nếu có mã giảm giá và chỉ lấy mã giảm giá đầu tiên
+    List<String> discountCodes = [];
+    if (disItem.isNotEmpty && disItem[0].ma.isNotEmpty) {
+      discountCodes.add(disItem[0].ma); // Lấy mã giảm giá đầu tiên từ danh sách
+    }
+
+    print("Mã giảm giá đang sử dụng: $discountCodes");
+
+    // Kiểm tra cấu trúc orderDetails trước khi gửi
+    debugPrint("Order Details: $orderDetails");
+    debugPrint("Discount Codes: $discountCodes");
+
+    // Lấy header xác thực (token hoặc các thông tin khác nếu cần)
     final headers = await getAuthHeader();
+
+    // Kiểm tra nếu headers là null hoặc không hợp lệ
+    if (headers.isEmpty) {
+      debugPrint('❌ Không có header xác thực.');
+      throw Exception('Không thể xác thực yêu cầu, vui lòng đăng nhập lại.');
+    }
+
+    // Chuẩn bị body yêu cầu API
     final body = jsonEncode({
-      'id_dia_chi': addressId,
-      'phuong_thuc_thanh_toan': paymentMethod,
-      'ghi_chu': note ?? '',
+      'id_nguoi_dung': userId,            // Thêm id_nguoi_dung vào body
+      'id_dia_chi': addressId,            // Địa chỉ người nhận
+      'phuong_thuc_thanh_toan': paymentMethod, // Phương thức thanh toán
+      'ghi_chu': note ?? '',              // Ghi chú, nếu có
+      'chi_tiet_san_pham': orderDetails,
+      'ma_giam_gia': discountCodes.isNotEmpty ? discountCodes[0] : null, // Truyền 1 mã giảm giá nếu có, nếu không thì truyền null
     });
 
+    // Debug body để kiểm tra cấu trúc
+    debugPrint("Request Body: $body");
+
     try {
+      // Gửi yêu cầu thanh toán tới API checkout
       final res = await http.post(Uri.parse(API.checkout), headers: headers, body: body);
 
+      // Kiểm tra phản hồi từ server
       Map<String, dynamic> data;
       try {
         data = jsonDecode(res.body);
@@ -149,11 +235,12 @@ class OrderService {
         throw Exception('⚠️ Server trả về dữ liệu không hợp lệ.');
       }
 
-      if ((res.statusCode == 200 || res.statusCode == 201) && data['success'] == true) {
+      // Kiểm tra mã trạng thái phản hồi
+      if (res.statusCode == 200 || res.statusCode == 201) {
         return {
           'orderId': data['orderId'],
           'message': data['message'],
-          'payUrl': data['payUrl'], // 👈 MoMo có, COD không
+          'payUrl': data['payUrl'], // URL thanh toán (nếu có, ví dụ: MoMo)
         };
       } else {
         final errorMessage = data['message'] ?? 'Lỗi không xác định từ server';
@@ -165,6 +252,10 @@ class OrderService {
       rethrow;
     }
   }
+
+
+
+
 
   /// 💰 Tạo thanh toán MoMo (nếu cần)
   static Future<String?> createMomoPayment(int orderId, double amount) async {

@@ -141,11 +141,13 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
                     Text(
                       ma.loai == 'phan_tram'
                           ? "🔻 Giảm ${ma.giaTri}%"
-                          : "🔻 Giảm ${ma.giaTri.toStringAsFixed(0)}đ",
+                          : "Giam ${ma.giaTri}%",
                     ),
                     // Text("💰 Đơn tối thiểu: ${ma.dieuKien}đ"),
                     Text(
-                      "📅 HSD: ${ma.ketThuc.toLocal().toString().substring(0, 10)}",
+
+
+                      "📅 HSD:${ma.batDau.toLocal().toString().substring(0, 10)} - ${ma.ketThuc.toLocal().toString().substring(0, 10)}",
                     ),
                   ],
                 ),

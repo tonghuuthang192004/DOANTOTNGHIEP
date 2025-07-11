@@ -49,8 +49,9 @@ class _FoodCategoryListState extends State<FoodCategoryList> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.network(
-                    category.hinhAnh ?? 'https://via.placeholder.com/60',
-                    width: Dimensions.width40,
+                    category.hinhAnh.startsWith('http') || category.hinhAnh.startsWith('https')
+                        ? category.hinhAnh
+                        : 'http://10.0.2.2:3000/uploads/${category.hinhAnh}',                    width: Dimensions.width40,
                     height: Dimensions.height40,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {

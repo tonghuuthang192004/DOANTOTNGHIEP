@@ -142,12 +142,26 @@ class _ProductImageAppBarState extends State<ProductImageAppBar> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
-                child: Image.network(
-                  widget.product?['hinh_anh'] ?? '',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.fastfood, size: 60, color: Colors.grey),
-                ),
+
+                child:Image.network(
+                  (widget.product != null && widget.product!['hinh_anh'] != null && widget.product!['hinh_anh']!.isNotEmpty)
+                      ? (widget.product!['hinh_anh']!.startsWith('http') || widget.product!['hinh_anh']!.startsWith('https')
+                      ? widget.product!['hinh_anh']!
+                      : 'http://10.0.2.2:3000/uploads/${widget.product!['hinh_anh']}')
+                      : 'https://via.placeholder.com/150', // Default image when no valid URL is found
+                  fit: BoxFit.cover, // To control the image display
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.fastfood,
+                      size: 60,
+                      color: Colors.grey,
+                    );
+                  },
+                )
+
+
+
+
               ),
             ),
           ),

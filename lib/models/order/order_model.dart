@@ -39,7 +39,8 @@ class OrderModel {
       paymentStatus: json['trang_thai_thanh_toan']?.toString() ?? '',
       totalPrice: json['tong_gia'] is num
           ? (json['tong_gia'] as num).toDouble()
-          : double.tryParse(json['tong_gia']?.toString() ?? '') ?? 0.0,
+          : (json['tong_gia'] != null ? double.tryParse(json['tong_gia']?.toString() ?? '') ?? 0.0 : 0.0),
+
       note: json['ghi_chu']?.toString(),
       createdAt: DateTime.tryParse(json['ngay_tao']?.toString() ?? '') ??
           DateTime.now(),

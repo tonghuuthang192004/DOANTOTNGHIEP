@@ -29,7 +29,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int quantity = 1;
   bool isLoading = true;
   List<Map<String, dynamic>> relatedProducts = [];
-
+  int get stockQuantity{
+    return widget.product?['so_luong_ton']??0;
+  }
   @override
   void initState() {
     super.initState();
@@ -91,7 +93,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   QuantitySelector(
                     quantity: quantity,
-                    onIncrease: () => setState(() => quantity++),
+                    onIncrease: () {
+                      if (quantity < stockQuantity) {
+                        setState(() => quantity++);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("❌ Sản phẩm chỉ còn $stockQuantity "),
+                          ),
+                        );
+                      }
+                    },
                     onDecrease: () {
                       if (quantity > 1) setState(() => quantity--);
                     },
@@ -128,7 +140,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("❌ Lỗi khi thêm vào giỏ hàng: $e")),
+              SnackBar(content: Text("Sản Phẩm Chỉ còn  ${widget.product?['so_luong_ton']
+              }")),
             );
           }
         },

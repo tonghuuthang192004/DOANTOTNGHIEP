@@ -27,11 +27,10 @@ class API {
 
   // 🛍️ Product APIs
   static const String getAllProducts = '$baseUrl/products';
-  static String searchProducts(String keyword) => '$baseUrl/products?search=$keyword';
+  static String searchProducts(String keyword) => '$baseUrl/admin/products?search=$keyword';
   static const String getHotProducts = '$baseUrl/products/hot';
   static String getProductById(int id) => '$baseUrl/products/$id';
-  static String getRelatedProducts(int categoryId, int productId) =>
-      '$baseUrl/products/category/$categoryId/related/$productId';
+  static String getRelatedProducts(int categoryId, int productId) => '$baseUrl/products/category/$categoryId/related/$productId';
 
 
 
@@ -92,7 +91,7 @@ class API {
       '$baseUrl/favorite/is-favorite/$productId/$userId';
 
   // 💰 Payment APIs
-  static const String momoPayment = '$baseUrl/order/create';
+  static const String momoPayment = '$baseUrl/admin/order/createOrder';
   static const String confirmCod = '$baseUrl/payment/confirm-cod';
 
 }

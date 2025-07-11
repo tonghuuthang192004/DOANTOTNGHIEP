@@ -116,17 +116,17 @@ class _FoodListPageState extends State<FoodListPage> {
                                         Radius.circular(Dimensions.radius15),
                                   ),
                                   child: Image.network(
-                                    food.hinhAnh,
-                                    height: Dimensions.screenHeight * 0.15,
+                                    food.hinhAnh.startsWith('http') || food.hinhAnh.startsWith('https')
+                                        ? food.hinhAnh
+                                        : 'http://10.0.2.2:3000/uploads/${food.hinhAnh}',
                                     width: double.infinity,
-                                    fit: BoxFit.cover,
+                                    height: Dimensions.height100,// Điều chỉnh theo yêu cầu của bạn
+                                    fit: BoxFit.cover,       // Điều chỉnh cách hiển thị hình ảnh
                                     errorBuilder: (context, error, stackTrace) {
-                                      print("🚫 Lỗi ảnh: $error");
                                       return Container(
-                                        height: Dimensions.screenHeight * 0.15,
                                         width: double.infinity,
                                         color: Colors.grey[200],
-                                        child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                                        child: Icon(Icons.broken_image, color: Colors.grey),
                                       );
                                     },
                                   )

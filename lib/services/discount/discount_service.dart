@@ -5,6 +5,8 @@ import '../../models/discount/discount_model.dart';
 
 class DiscountService {
   /// 🔥 Lấy danh sách voucher đang hoạt động
+  ///
+
   static Future<List<DiscountModel>> getAllDiscounts() async {
     final response = await http.get(Uri.parse(API.getAllDiscounts));
 
@@ -14,6 +16,14 @@ class DiscountService {
     } else {
       throw Exception('Không thể lấy danh sách voucher');
     }
+  }
+  static Future<List<String>> getAllDiscountCodes() async {
+    final List<DiscountModel> discounts = await getAllDiscounts();
+
+    // Lấy tất cả mã giảm giá từ danh sách voucher
+    List<String> discountCodes = discounts.map((discount) => discount.ma).toList();
+
+    return discountCodes;
   }
 
   /// 📌 Lưu voucher cho người dùng

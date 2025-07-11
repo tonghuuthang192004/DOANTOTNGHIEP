@@ -36,16 +36,20 @@ class FoodCard extends StatelessWidget {
                 top: Radius.circular(Dimensions.radius20),
               ),
               child: Image.network(
-                food.hinhAnh,
-                height: Dimensions.height100,
+                food.hinhAnh.startsWith('http') || food.hinhAnh.startsWith('https')
+                    ? food.hinhAnh
+                    : 'http://10.0.2.2:3000/uploads/${food.hinhAnh}',
                 width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: Dimensions.height100,
-                  color: Colors.grey[200],
-                  child: Icon(Icons.broken_image, color: Colors.grey),
-                ),
-              ),
+                height: Dimensions.height100,// Điều chỉnh theo yêu cầu của bạn
+                fit: BoxFit.cover,       // Điều chỉnh cách hiển thị hình ảnh
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: double.infinity,
+                    color: Colors.grey[200],
+                    child: Icon(Icons.broken_image, color: Colors.grey),
+                  );
+                },
+              )
             ),
             Flexible(
               fit: FlexFit.loose,

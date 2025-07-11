@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:frontendtn1/widgets/bottom_navigation_bar.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import '../../services/cart/cart_service.dart';
 
 class WebViewPaymentPage extends StatefulWidget {
   final String url;
@@ -30,9 +33,9 @@ class _WebViewPaymentPageState extends State<WebViewPaymentPage> {
             debugPrint("✅ [WebView] Tải xong: $url");
             setState(() => isLoading = false);
           },
-          onNavigationRequest: (request) {
+          onNavigationRequest: (request) async {
             debugPrint("➡️ [WebView] Điều hướng: ${request.url}");
-            if (_handlePaymentResult(request.url)) {
+            if (await _handlePaymentResult(request.url)) {
               return NavigationDecision.prevent; // ✅ Ngăn điều hướng sau khi xử lý
             }
             if (request.url.startsWith("momo://")) {
@@ -47,25 +50,26 @@ class _WebViewPaymentPageState extends State<WebViewPaymentPage> {
   }
 
   /// 📦 Xử lý kết quả thanh toán từ URL
-  bool _handlePaymentResult(String url) {
-    if (isResultSent) return false; // ✅ Đã xử lý rồi thì bỏ qua
+  Future<bool> _handlePaymentResult(String url) async {
+    if (isResultSent) return false;
 
     if (url.contains("status=0") || url.contains("success") || url.contains("errorCode=0")) {
       debugPrint("🎉 Thanh toán thành công: $url");
       isResultSent = true;
-      Navigator.pop(context, true); // ✅ Thành công
+      await CartService.clearCart();
+
+      // ✅ Điều hướng về trang Home (dùng trực tiếp widget)
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => MainNavigation()),
+            (Route<dynamic> route) => false,
+      );
+
       return true;
     }
 
-    if (url.contains("status=1") || url.contains("fail") || url.contains("errorCode")) {
-      debugPrint("❌ Thanh toán thất bại: $url");
-      isResultSent = true;
-      Navigator.pop(context, false); // ❌ Thất bại
-      return true;
-    }
-
-    return false; // 🟢 Chưa có kết quả, tiếp tục điều hướng
+    return false;
   }
+
 
   @override
   Widget build(BuildContext context) {
