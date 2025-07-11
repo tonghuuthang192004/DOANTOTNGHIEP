@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:frontendtn1/views/product/product_detail/product_image_appbar.dart';
@@ -29,9 +27,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int quantity = 1;
   bool isLoading = true;
   List<Map<String, dynamic>> relatedProducts = [];
-  int get stockQuantity{
-    return widget.product?['so_luong_ton']??0;
-  }
+
   @override
   void initState() {
     super.initState();
@@ -94,15 +90,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   QuantitySelector(
                     quantity: quantity,
                     onIncrease: () {
-                      if (quantity < stockQuantity) {
-                        setState(() => quantity++);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("❌ Sản phẩm chỉ còn $stockQuantity "),
-                          ),
-                        );
-                      }
+                      setState(() => quantity++);  // Không cần kiểm tra stockQuantity nữa
                     },
                     onDecrease: () {
                       if (quantity > 1) setState(() => quantity--);
@@ -140,8 +128,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Sản Phẩm Chỉ còn  ${widget.product?['so_luong_ton']
-              }")),
+              SnackBar(content: Text("Lỗi khi thêm sản phẩm vào giỏ hàng")),
             );
           }
         },

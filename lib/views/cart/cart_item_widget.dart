@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/cart/cart_model.dart';
 import '../../utils/dimensions.dart';
-import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
+import 'package:intl/intl.dart';
+
+class CartItem extends StatelessWidget {
   final CartModel cart;
   final VoidCallback onAdd;
   final VoidCallback onReduce;
@@ -17,10 +19,6 @@ import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
 
   String formatCurrency(double amount) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
-  }
-
-  int get stockQuantity {
-    return cart.product.soLuongkho;  // Lấy số lượng trong kho
   }
 
   @override
@@ -87,17 +85,7 @@ import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      // Thông tin số lượng còn lại
-                      Expanded(
-                        child: Text(
-                          "Sản phẩm còn lại: ${cart.product.soLuongkho}",
-                          style: TextStyle(
-                            color: Colors.black45,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.end,
-                        ),
-                      ),
+                      // Thông tin số lượng còn lại đã bị loại bỏ
                     ],
                   ),
                   SizedBox(height: Dimensions.height10),
@@ -109,11 +97,11 @@ import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
                         padding: EdgeInsets.symmetric(horizontal: Dimensions.width10),
                         child: Text('${cart.quantity}', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      // Nút cộng số lượng, vô hiệu hóa khi đã đủ số lượng trong kho
+                      // Nút cộng số lượng, vô hiệu hóa khi số lượng giỏ hàng đã đủ
                       _quantityButton(
                         Icons.add,
                         onAdd,
-                        cart.quantity >= cart.product.soLuongkho,  // Kiểm tra xem số lượng giỏ hàng có vượt quá số lượng kho không
+                        false,  // Sửa lại đây để không còn kiểm tra số lượng kho nữa
                       ),
                       SizedBox(width: Dimensions.width10),
                       // Nút xóa sản phẩm
@@ -174,4 +162,3 @@ import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
     );
   }
 }
-

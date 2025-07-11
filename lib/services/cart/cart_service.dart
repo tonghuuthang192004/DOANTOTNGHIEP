@@ -9,18 +9,20 @@ import '../../models/user/user_token.dart';
 
 class CartService {
   static List<CartModel> _cartItems = [];
+
   static List<Map<String, dynamic>> getOrderDetails() {
     List<Map<String, dynamic>> orderDetails = _cartItems.map((item) {
       return {
-        'productId': item.product.id,  // Đảm bảo rằng item.product.id không phải là null
-        'quantity': item.quantity,     // Đảm bảo rằng quantity không phải là null
-        'price': item.product.gia,     // Đảm bảo rằng price không phải là null
+        'productId': item.product.id,
+        'quantity': item.quantity,
+        'price': item.product.gia,
       };
     }).toList();
 
     print("Giỏ hàng sau khi kiểm tra: $orderDetails");  // In ra giỏ hàng để kiểm tra
     return orderDetails;
   }
+
   static void _showDialog(BuildContext context, String message, {bool isError = true}) {
     showDialog(
       context: context,
@@ -72,20 +74,16 @@ class CartService {
         throw Exception("❌ Giá sản phẩm không hợp lệ");
       }
 
-      // Get user token (Assuming your token service works)
       final token = await UserToken.getToken();
       if (token == null || token.isEmpty) {
         throw Exception("❌ Token không hợp lệ");
       }
 
-      // Prepare API URL
       final url = Uri.parse(API.addToCart);
 
-      // Log the product details
       print("Token: $token");
       print("Adding Product ID: ${product.id}, Quantity: $quantity");
 
-      // Make the API request
       final response = await http.post(
         url,
         headers: {
@@ -98,11 +96,9 @@ class CartService {
         }),
       );
 
-      // Log the response status and body
       print("Response Status: ${response.statusCode}");
       print("Response Body: ${response.body}");
 
-      // Handle different response statuses
       if (response.statusCode == 400) {
         throw Exception("❌ Sản phẩm không đủ số lượng trong kho");
       } else if (response.statusCode == 404) {
@@ -113,14 +109,13 @@ class CartService {
         throw Exception("❌ Lỗi khi thêm vào giỏ hàng: ${response.body}");
       }
 
-      // Handle successful response
       print("Sản phẩm đã được thêm vào giỏ hàng!");
     } catch (e) {
-      // Log and rethrow the error for handling higher up
       print("Error adding product to cart: $e");
       throw Exception("❌ Đã xảy ra lỗi khi thêm vào giỏ hàng: $e");
     }
   }
+
   static Future<void> updateQuantity(String productId, int quantity) async {
     try {
       final token = await UserToken.getToken();

@@ -6,7 +6,6 @@ class ProductModel {
   final String hinhAnh;
   final double danhGia;
   final int? danhMucId;
-  final int soLuongkho;
 
   ProductModel({
     required this.id,
@@ -16,8 +15,6 @@ class ProductModel {
     required this.hinhAnh,
     required this.danhGia,
     required this.danhMucId,
-    required this.soLuongkho, // Thêm trường này vào constructor
-
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -35,11 +32,8 @@ class ProductModel {
           ? double.tryParse(json['danh_gia'].toString()) ?? 0.0
           : 0.0,
       danhMucId: json['danh_muc_id'] ?? json['id_danh_muc'],
-      soLuongkho: json['so_luong_kho'] ?? 0, // Thêm dòng này để parse số lượng tồn kho
-
     );
   }
-
 
   Map<String, dynamic> toJson() {
     return {
@@ -50,7 +44,6 @@ class ProductModel {
       'hinh_anh': hinhAnh,
       'danh_gia': danhGia,
       'danh_muc_id': danhMucId,
-      'so_luong_ton': soLuongkho, // Thêm dòng này để đưa số lượng tồn kho vào JSON
     };
   }
 }
