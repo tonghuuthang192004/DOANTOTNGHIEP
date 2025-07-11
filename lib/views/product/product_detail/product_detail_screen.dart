@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:frontendtn1/views/product/product_detail/product_image_appbar.dart';
@@ -19,6 +17,7 @@ import 'bottom_bar_actions.dart';
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
 
+
   const ProductDetailScreen({Key? key, this.product}) : super(key: key);
 
   @override
@@ -29,9 +28,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int quantity = 1;
   bool isLoading = true;
   List<Map<String, dynamic>> relatedProducts = [];
-  int get stockQuantity{
-    return widget.product?['so_luong_ton']??0;
-  }
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +62,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return getBasePrice() * quantity;
   }
 
+  bool get isOutOfStock {
+    final status = widget.product?['trang_thai']?.toString().toLowerCase() ?? '';
+    return status != 'active';
+  }
+
+  void showOutOfStockMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Sản phẩm đã hết hàng"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Dimensions.init(context);
@@ -76,11 +87,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ProductImageAppBar(
             product: {
               ...?widget.product,
-              'id_san_pham': widget.product?['id'], // 👈 Thêm trường id_san_pham thủ công nếu cần
+              'id_san_pham': widget.product?['id'], // 👈 Thêm id_san_pham thủ công nếu cần
             },
             cartItemCount: 2,
           ),
-
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(Dimensions.width20),
@@ -94,22 +104,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   QuantitySelector(
                     quantity: quantity,
                     onIncrease: () {
-                      if (quantity < stockQuantity) {
-                        setState(() => quantity++);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("❌ Sản phẩm chỉ còn $stockQuantity "),
-                          ),
-                        );
-                      }
+                      setState(() => quantity++);
                     },
                     onDecrease: () {
                       if (quantity > 1) setState(() => quantity--);
                     },
                   ),
                   SizedBox(height: Dimensions.height20),
-                  // 👇 Thêm phần đánh giá sản phẩm
                   ProductReviewSection(
                     productId: widget.product?['id'],
                   ),
@@ -126,6 +127,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       bottomNavigationBar: BottomBarActions(
         totalPrice: getTotalPrice(),
         onAddToCart: () async {
+          if (isOutOfStock) {
+            showOutOfStockMessage();
+            return;
+          }
+
           try {
             final product = ProductModel.fromJson(widget.product!);
             await CartService.addToCart(product, quantity: quantity);
@@ -139,13 +145,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               MaterialPageRoute(builder: (_) => const CartPage()),
             );
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Sản Phẩm Chỉ còn  ${widget.product?['so_luong_ton']
-              }")),
-            );
+            print('❌ Lỗi thêm vào giỏ hàng: $e');
           }
         },
         onBuyNow: () {
+          if (isOutOfStock) {
+            showOutOfStockMessage();
+            return;
+          }
+
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => CheckoutPage()),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/order/order_detail_model.dart';
 import '../../services/order/order_service.dart';
 import '../../utils/dimensions.dart';
+import '../product/product_detail/product_detail_screen.dart';
 
 class OrderDetailPage extends StatefulWidget {
   final int orderId;
@@ -136,51 +137,77 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   Widget _buildProductItem(OrderItemModel item) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(Dimensions.radius10),
-          child: Image.network(
-            item.imageUrl.isNotEmpty
-                ? item.imageUrl
-                : 'https://via.placeholder.com/100',
-            width: Dimensions.width50,
-            height: Dimensions.height50,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: Colors.grey[300],
+    return InkWell(
+      onTap: () {
+        final productData = {
+          'id': item.productId,
+          'gia': item.price ?? 0,
+          'ten_san_pham': item.productName ?? 'Không rõ',
+          'hinh_anh': (item.imageUrl?.isNotEmpty == true)
+              ? (item.imageUrl.startsWith('http')
+              ? item.imageUrl
+              : 'http://10.0.2.2:3000/uploads/${item.imageUrl}')
+              : 'https://via.placeholder.com/150',
+          'trang_thai': item.status ?? 'Đã hủy', // 👈 Gửi trạng thái thực tế của sản phẩm
+        };
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductDetailScreen(product: productData),
+          ),
+        );
+      },
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(Dimensions.radius10),
+            child: Image.network(
+              (item.imageUrl?.isNotEmpty == true)
+                  ? (item.imageUrl.startsWith('http')
+                  ? item.imageUrl
+                  : 'http://10.0.2.2:3000/uploads/${item.imageUrl}')
+                  : 'https://via.placeholder.com/100',
               width: Dimensions.width50,
               height: Dimensions.height50,
-              child: const Icon(Icons.broken_image, color: Colors.grey),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: Colors.grey[300],
+                width: Dimensions.width50,
+                height: Dimensions.height50,
+                child: const Icon(Icons.broken_image, color: Colors.grey),
+              ),
             ),
           ),
-        ),
-        SizedBox(width: Dimensions.width12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                item.productName,
-                style: TextStyle(
-                  fontSize: Dimensions.font16,
-                  fontWeight: FontWeight.bold,
+          SizedBox(width: Dimensions.width12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.productName,
+                  style: TextStyle(
+                    fontSize: Dimensions.font16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              SizedBox(height: Dimensions.height5),
-              Text('Giá: ${_formatCurrency(item.price)}đ'),
-              Text('Số lượng: ${item.quantity}'),
-              Text(
-                'Tổng: ${_formatCurrency(item.total)}đ',
-                style: const TextStyle(color: Colors.orange),
-              ),
-            ],
+                SizedBox(height: Dimensions.height5),
+                Text('Giá: ${_formatCurrency(item.price ?? 0)}đ'),
+                Text('Số lượng: ${item.quantity}'),
+                Text(
+                  'Tổng: ${_formatCurrency(item.total)}đ',
+                  style: const TextStyle(color: Colors.orange),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
+
+
 
   Widget _buildTotalSection() {
     double total = items.fold(0.0, (sum, item) => sum + item.total);

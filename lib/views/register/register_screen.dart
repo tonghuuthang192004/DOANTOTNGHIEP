@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/dimensions.dart';
 import 'register_header.dart';
-import 'register_form.dart';
-
+import 'register_form.dart'; // ✅ THÊM DÒNG NÀY
 
 class RegisterScreen extends StatelessWidget {
   const RegisterScreen({super.key});
@@ -31,12 +30,20 @@ class RegisterScreen extends StatelessWidget {
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
-                  RegisterHeader(),
-                  SizedBox(height: 30),
-                  RegisterForm(),
-                  SizedBox(height: 25),
-                  // SocialLogin()
+                children: [
+                  const RegisterHeader(),
+                  SizedBox(height: Dimensions.height30),
+                  const RegisterForm(), // ✅ Để const nếu RegisterForm là Stateless
+                  SizedBox(height: Dimensions.height25),
+                  // TextButton(
+                  //   onPressed: () {
+                  //     Navigator.pop(context);
+                  //   },
+                  //   child: const Text(
+                  //     'Bạn đã có tài khoản? Đăng nhập',
+                  //     style: TextStyle(color: Colors.blue),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
