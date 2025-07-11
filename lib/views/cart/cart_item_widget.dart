@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/cart/cart_model.dart';
 import '../../utils/dimensions.dart';
-import 'package:intl/intl.dart';
-
-class CartItem extends StatelessWidget {
+import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
   final CartModel cart;
   final VoidCallback onAdd;
   final VoidCallback onReduce;
@@ -19,6 +17,10 @@ class CartItem extends StatelessWidget {
 
   String formatCurrency(double amount) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
+  }
+
+  int get stockQuantity {
+    return cart.product.soLuongkho;  // Lấy số lượng trong kho
   }
 
   @override
@@ -49,7 +51,9 @@ class CartItem extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(Dimensions.radius12),
               child: Image.network(
-                cart.product.hinhAnh,
+                cart.product.hinhAnh.startsWith('http') || cart.product.hinhAnh.startsWith('https')
+                    ? cart.product.hinhAnh
+                    : 'http://10.0.2.2:3000/uploads/${cart.product.hinhAnh}',
                 width: Dimensions.height100,
                 height: Dimensions.height100,
                 fit: BoxFit.contain,
@@ -72,20 +76,47 @@ class CartItem extends StatelessWidget {
                     cart.product.ten,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                  Text(
-                    formatCurrency(cart.product.gia),
-                    style: const TextStyle(color: Colors.orange),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        formatCurrency(cart.product.gia),
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      // Thông tin số lượng còn lại
+                      Expanded(
+                        child: Text(
+                          "Sản phẩm còn lại: ${cart.product.soLuongkho}",
+                          style: TextStyle(
+                            color: Colors.black45,
+                            fontSize: 14,
+                          ),
+                          textAlign: TextAlign.end,
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: Dimensions.height10),
                   Row(
                     children: [
+                      // Nút giảm số lượng
                       _quantityButton(Icons.remove, onReduce, cart.quantity <= 1),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: Dimensions.width10),
                         child: Text('${cart.quantity}', style: const TextStyle(fontWeight: FontWeight.bold)),
                       ),
-                      _quantityButton(Icons.add, onAdd, false),
+                      // Nút cộng số lượng, vô hiệu hóa khi đã đủ số lượng trong kho
+                      _quantityButton(
+                        Icons.add,
+                        onAdd,
+                        cart.quantity >= cart.product.soLuongkho,  // Kiểm tra xem số lượng giỏ hàng có vượt quá số lượng kho không
+                      ),
                       SizedBox(width: Dimensions.width10),
+                      // Nút xóa sản phẩm
                       InkWell(
                         onTap: () async {
                           final confirm = await showDialog<bool>(
@@ -119,10 +150,10 @@ class CartItem extends StatelessWidget {
                         ),
                       ),
                     ],
-                  )
+                  ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -143,3 +174,4 @@ class CartItem extends StatelessWidget {
     );
   }
 }
+

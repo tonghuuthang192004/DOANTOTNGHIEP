@@ -14,9 +14,10 @@ class ProductReviewPage extends StatefulWidget {
 
 class _ProductReviewPageState extends State<ProductReviewPage> {
   List<OrderItemModel> items = [];
-  final Map<int, int> ratings = {}; // productId => rating
+  final Map<int, int> ratings = {};    // productId => rating
   final Map<int, String> comments = {}; // productId => comment
   bool isLoading = false;
+  bool isSubmitting = false;
 
   @override
   void initState() {
@@ -28,46 +29,78 @@ class _ProductReviewPageState extends State<ProductReviewPage> {
     setState(() => isLoading = true);
     try {
       final result = await OrderService.fetchOrderDetail(widget.orderId);
-      if (mounted) setState(() => items = result);
+      if (mounted) setState(() => items = result['items']);
     } catch (e) {
-      print('❌ Lỗi tải sản phẩm đơn hàng: $e');
+      debugPrint('❌ Lỗi tải sản phẩm đơn hàng: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Không thể tải sản phẩm: $e')),
+        );
+      }
     }
     if (mounted) setState(() => isLoading = false);
   }
 
   Future<void> _submitReviews() async {
-    final allRated = items.every((item) => ratings[item.productId] != null);
+    // Kiểm tra đã đánh giá đầy đủ sao
+    final allRated = items.every((item) => ratings[item.productId] != null && ratings[item.productId]! > 0);
     if (!allRated) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('👉 Vui lòng đánh giá tất cả sản phẩm')),
+        const SnackBar(content: Text('👉 Vui lòng đánh giá đầy đủ sao cho tất cả sản phẩm')),
       );
+      debugPrint('❌ Chưa đánh giá đủ sao cho tất cả sản phẩm');
       return;
     }
 
-    try {
-      for (final item in items) {
-        final score = ratings[item.productId]!;
-        final comment = comments[item.productId] ?? '';
+    // Kiểm tra comment không được để trống
+    final allCommented = items.every((item) {
+      final c = comments[item.productId];
+      return c != null && c.trim().isNotEmpty;
+    });
+    if (!allCommented) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('👉 Vui lòng nhập nhận xét cho tất cả sản phẩm')),
+      );
+      debugPrint('❌ Chưa nhập nhận xét cho tất cả sản phẩm');
+      return;
+    }
 
+    setState(() => isSubmitting = true);
+    debugPrint('🟡 Bắt đầu gửi đánh giá cho ${items.length} sản phẩm');
+
+    try {
+      await Future.wait(items.map((item) async {
+        final score = ratings[item.productId]!;
+        final comment = comments[item.productId]!.trim();
+
+        debugPrint('➡️ Gửi đánh giá sản phẩm id=${item.productId}, điểm=$score, nhận xét="$comment"');
         await OrderService.rateProduct(
           productId: item.productId,
           score: score,
           comment: comment,
         );
-      }
+        debugPrint('✅ Đã gửi đánh giá thành công sản phẩm id=${item.productId}');
+      }));
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ Đánh giá thành công')),
       );
+      debugPrint('🎉 Gửi đánh giá tất cả sản phẩm thành công');
       Navigator.pop(context);
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Gửi đánh giá thất bại')),
-      );
+      debugPrint('❌ Lỗi gửi đánh giá: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Gửi đánh giá thất bại: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isSubmitting = false);
+      debugPrint('🟢 Kết thúc gửi đánh giá');
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -92,9 +125,14 @@ class _ProductReviewPageState extends State<ProductReviewPage> {
       bottomNavigationBar: Padding(
         padding: EdgeInsets.all(Dimensions.width15),
         child: ElevatedButton(
-          onPressed: _submitReviews,
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-          child: const Text('Gửi đánh giá', style: TextStyle(fontSize: 16)),
+          onPressed: isSubmitting ? null : _submitReviews,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.orange,
+            minimumSize: Size(double.infinity, Dimensions.height50),
+          ),
+          child: isSubmitting
+              ? const CircularProgressIndicator(color: Colors.white)
+              : const Text('Gửi đánh giá', style: TextStyle(fontSize: 16)),
         ),
       ),
     );
@@ -103,7 +141,9 @@ class _ProductReviewPageState extends State<ProductReviewPage> {
   Widget _buildReviewCard(OrderItemModel item, int pid) {
     return Card(
       margin: EdgeInsets.only(bottom: Dimensions.height12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.radius10)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Dimensions.radius10),
+      ),
       child: Padding(
         padding: EdgeInsets.all(Dimensions.width12),
         child: Column(
@@ -114,13 +154,21 @@ class _ProductReviewPageState extends State<ProductReviewPage> {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(Dimensions.radius10),
-                  child: Image.network(item.imageUrl, width: 60, height: 60, fit: BoxFit.cover),
+                  child: Image.network(
+                    item.imageUrl.isNotEmpty ? item.imageUrl : 'https://via.placeholder.com/60',
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.cover,
+                  ),
                 ),
                 SizedBox(width: Dimensions.width10),
                 Expanded(
                   child: Text(
                     item.productName,
-                    style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: Dimensions.font16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -132,7 +180,10 @@ class _ProductReviewPageState extends State<ProductReviewPage> {
                 final selected = (ratings[pid] ?? 0) > index;
                 return IconButton(
                   onPressed: () => setState(() => ratings[pid] = index + 1),
-                  icon: Icon(Icons.star, color: selected ? Colors.orange : Colors.grey[300]),
+                  icon: Icon(
+                    Icons.star,
+                    color: selected ? Colors.orange : Colors.grey[300],
+                  ),
                   iconSize: 28,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),

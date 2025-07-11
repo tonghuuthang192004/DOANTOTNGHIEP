@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../models/cart/cart_model.dart';
 import '../../models/product/product_model.dart';
 import '../../services/cart/cart_service.dart';
-
 class CartController extends ChangeNotifier {
   List<CartModel> _cartItems = [];
   List<CartModel> get cartItems => _cartItems;
@@ -51,21 +50,23 @@ class CartController extends ChangeNotifier {
 
       if (existingItem.id.isNotEmpty) {
         final newQuantity = existingItem.quantity + quantity;
+        // Cập nhật số lượng sản phẩm trong giỏ hàng
         await CartService.updateQuantity(product.id.toString(), newQuantity);
-      } else {
-        try {
-          await CartService.addToCart(product, quantity: quantity);
-        } catch (e) {
-          // Nếu lỗi do soft-delete => khôi phục
-          if (e.toString().contains('soft-delete')) {
-            await restoreItem(product.id.toString(), quantity: quantity);
-          } else {
-            rethrow; // ném lỗi lại nếu không phải soft-delete
-          }
-        }
-      }
 
-      await loadCart();
+        // Cập nhật giỏ hàng trong bộ nhớ mà không cần tải lại
+        refreshCart(_cartItems.map((item) {
+          if (item.product.id == product.id) {
+            return CartModel(id: item.id, product: item.product, quantity: newQuantity);
+          }
+          return item;
+        }).toList());
+      } else {
+        // Thêm sản phẩm mới vào giỏ
+        await CartService.addToCart(product, quantity: quantity);
+
+        // Tải lại giỏ hàng sau khi thêm
+        await loadCart();
+      }
     } catch (e) {
       error = "❌ Không thể thêm sản phẩm: $e";
       notifyListeners();
@@ -87,7 +88,14 @@ class CartController extends ChangeNotifier {
   Future<void> updateQuantity(String productId, int quantity) async {
     try {
       await CartService.updateQuantity(productId, quantity);
-      await loadCart();
+
+      // Cập nhật giỏ hàng trong bộ nhớ
+      refreshCart(_cartItems.map((item) {
+        if (item.product.id == productId) {
+          return CartModel(id: item.id, product: item.product, quantity: quantity);
+        }
+        return item;
+      }).toList());
     } catch (e) {
       error = "❌ Không thể cập nhật số lượng: $e";
       notifyListeners();
@@ -98,7 +106,10 @@ class CartController extends ChangeNotifier {
   Future<void> removeItem(String productId) async {
     try {
       await CartService.removeCartItem(productId);
-      await loadCart();
+
+      // Cập nhật giỏ hàng trong bộ nhớ sau khi xoá sản phẩm
+      _cartItems.removeWhere((item) => item.product.id == productId);
+      notifyListeners();
     } catch (e) {
       error = "❌ Không thể xoá sản phẩm: $e";
       notifyListeners();

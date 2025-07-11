@@ -54,14 +54,32 @@ class UserService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'mat_khau': password}),
       );
+
+      // Kiểm tra mã trạng thái HTTP
+      if (response.statusCode != 200) {
+        print('❌ [Login] Error: ${response.statusCode}');
+        return {
+          'statusCode': response.statusCode,
+          'body': {'message': 'Lỗi kết nối', 'error': 'Mã trạng thái không hợp lệ'}
+        };
+      }
+
+      // Giải mã dữ liệu nếu mã trạng thái là 200
       final decoded = jsonDecode(response.body);
       print('📦 [Login] Response: $decoded');
 
-      if (response.statusCode == 200 && decoded['token'] != null) {
+      // Kiểm tra xem token có tồn tại trong decoded hay không
+      if (decoded['token'] != null && decoded['user'] != null) {
         await UserToken.saveToken(decoded['token']);
-        await UserToken.saveUserId(decoded['user']['id_nguoi_dung']); // 👈 lưu userId
+        await UserToken.saveUserId(decoded['user']['id_nguoi_dung']); // Lưu userId
         await prefs.setString('user', jsonEncode(decoded['user']));
         print('✅ Token & userId đã lưu');
+      } else {
+        print('❌ [Login] Token hoặc thông tin người dùng không hợp lệ');
+        return {
+          'statusCode': 400,
+          'body': {'message': 'Thông tin đăng nhập không hợp lệ'}
+        };
       }
 
       return {'statusCode': response.statusCode, 'body': decoded};
@@ -73,7 +91,6 @@ class UserService {
       };
     }
   }
-
 
   /// 🖼 Upload avatar
   Future<Map<String, dynamic>> uploadAvatar(File avatarFile) async {

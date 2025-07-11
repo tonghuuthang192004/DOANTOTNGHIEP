@@ -112,7 +112,7 @@ class ProfilePage extends StatelessWidget {
                         title: 'Thay đổi địa chỉ',
                         subtitle: 'Quản lý địa chỉ giao hàng',
                         color: Colors.amber,
-                        onTap: () => _navigateTo(context, const AddressManagementPage()),
+                        onTap: () => _navigateTo(context,  AddressManagementPage()),
                       ),
                     ],
                   ),

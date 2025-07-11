@@ -1,15 +1,20 @@
+
+
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../../services/product/product_service.dart';
-import '../../../services/cart/cart_service.dart';
-import '../../../utils/dimensions.dart';
+import 'package:frontendtn1/views/product/product_detail/product_image_appbar.dart';
+import 'package:frontendtn1/views/product/product_detail/product_info_section.dart';
+import 'package:frontendtn1/views/product/product_detail/product_review_section.dart';
+import 'package:frontendtn1/views/product/product_detail/quantity_selector.dart';
+import 'package:frontendtn1/views/product/product_detail/related_product_list.dart';
+
 import '../../../models/product/product_model.dart';
+import '../../../services/cart/cart_service.dart';
+import '../../../services/product/product_service.dart';
+import '../../../utils/dimensions.dart';
 import '../../cart/cart_page.dart';
 import '../../pay/payment.dart';
 import 'bottom_bar_actions.dart';
-import 'product_image_appbar.dart';
-import 'product_info_section.dart';
-import 'quantity_selector.dart';
-import 'related_product_list.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
@@ -24,7 +29,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int quantity = 1;
   bool isLoading = true;
   List<Map<String, dynamic>> relatedProducts = [];
-
+  int get stockQuantity{
+    return widget.product?['so_luong_ton']??0;
+  }
   @override
   void initState() {
     super.initState();
@@ -86,12 +93,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   QuantitySelector(
                     quantity: quantity,
-                    onIncrease: () => setState(() => quantity++),
+                    onIncrease: () {
+                      if (quantity < stockQuantity) {
+                        setState(() => quantity++);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("❌ Sản phẩm chỉ còn $stockQuantity "),
+                          ),
+                        );
+                      }
+                    },
                     onDecrease: () {
                       if (quantity > 1) setState(() => quantity--);
                     },
                   ),
                   SizedBox(height: Dimensions.height20),
+                  // 👇 Thêm phần đánh giá sản phẩm
+                  ProductReviewSection(
+                    productId: widget.product?['id'],
+                  ),
                   isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : RelatedProductList(products: relatedProducts),
@@ -119,7 +140,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("❌ Lỗi khi thêm vào giỏ hàng: $e")),
+              SnackBar(content: Text("Sản Phẩm Chỉ còn  ${widget.product?['so_luong_ton']
+              }")),
             );
           }
         },

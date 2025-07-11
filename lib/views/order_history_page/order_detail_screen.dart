@@ -12,8 +12,9 @@ class OrderDetailPage extends StatefulWidget {
 }
 
 class _OrderDetailPageState extends State<OrderDetailPage> {
+  Map<String, dynamic>? orderInfo;
   List<OrderItemModel> items = [];
-  bool isLoading = false;
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -22,14 +23,28 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   }
 
   Future<void> _fetchOrderDetail() async {
-    setState(() => isLoading = true);
     try {
-      final fetched = await OrderService.fetchOrderDetail(widget.orderId);
-      if (mounted) setState(() => items = fetched);
+      debugPrint('📥 Bắt đầu tải chi tiết đơn hàng ID=${widget.orderId}');
+      final result = await OrderService.fetchOrderDetail(widget.orderId);
+      debugPrint('📥 Dữ liệu trả về từ fetchOrderDetail: $result');
+
+      final fetchedItems = result['items'] as List<OrderItemModel>;
+      final fetchedOrder = result['order'] as Map<String, dynamic>?;
+
+      setState(() {
+        items = fetchedItems;
+        orderInfo = fetchedOrder;
+        isLoading = false;
+      });
     } catch (e) {
-      print('❌ Lỗi khi tải chi tiết đơn hàng: $e');
+      debugPrint('❌ Lỗi khi tải chi tiết đơn hàng: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⚠️ Không thể tải chi tiết đơn hàng')),
+        );
+        setState(() => isLoading = false);
+      }
     }
-    if (mounted) setState(() => isLoading = false);
   }
 
   @override
@@ -37,34 +52,108 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     Dimensions.init(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Chi tiết ${_formatOrderCode(widget.orderId)}'),
+        title: Text('Thông tin chi tiết ${_formatOrderCode(widget.orderId)}'),
         backgroundColor: Colors.orange,
         foregroundColor: Colors.white,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : items.isEmpty
-          ? const Center(child: Text('Không có sản phẩm trong đơn hàng'))
-          : ListView.separated(
-        padding: EdgeInsets.all(Dimensions.width15),
-        itemCount: items.length,
-        separatorBuilder: (_, __) => Divider(height: Dimensions.height15),
-        itemBuilder: (context, index) => _buildItem(items[index]),
+          ? const Center(child: Text('❌ Không có sản phẩm trong đơn hàng'))
+          : Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildOrderInfo(),
+          const Divider(height: 1, thickness: 1),
+          Expanded(child: _buildProductList()),
+          _buildTotalSection(),
+        ],
       ),
     );
   }
 
-  Widget _buildItem(OrderItemModel item) {
+  Widget _buildOrderInfo() {
+    if (orderInfo == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(Dimensions.width15),
+      color: Colors.orange.shade50,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '📦 Người nhận: ${orderInfo!['customerName'] ?? 'Không rõ'}',
+            style: TextStyle(
+              fontSize: Dimensions.font16,
+              fontWeight: FontWeight.bold,
+              color: Colors.orange,
+            ),
+          ),
+          SizedBox(height: Dimensions.height8),
+          _infoRow(Icons.phone, 'SĐT', orderInfo!['customerPhone'] ?? ''),
+          _infoRow(Icons.location_on, 'Địa chỉ', orderInfo!['shippingAddress'] ?? ''),
+          _infoRow(Icons.payment, 'Thanh toán', orderInfo!['paymentStatus'] ?? ''),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String title, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: Dimensions.height5),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.grey.shade700),
+          SizedBox(width: Dimensions.width8),
+          Text(
+            '$title: ',
+            style: TextStyle(
+              fontSize: Dimensions.font14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: Dimensions.font14),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductList() {
+    return ListView.separated(
+      padding: EdgeInsets.all(Dimensions.width15),
+      itemCount: items.length,
+      separatorBuilder: (_, __) => Divider(height: Dimensions.height15),
+      itemBuilder: (context, index) => _buildProductItem(items[index]),
+    );
+  }
+
+  Widget _buildProductItem(OrderItemModel item) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ClipRRect(
-          borderRadius: BorderRadius.circular(Dimensions.radius12),
+          borderRadius: BorderRadius.circular(Dimensions.radius10),
           child: Image.network(
-            item.imageUrl,
-            width: Dimensions.width100,
-            height: Dimensions.height100,
-            fit: BoxFit.contain,
+            item.imageUrl.isNotEmpty
+                ? item.imageUrl
+                : 'https://via.placeholder.com/100',
+            width: Dimensions.width50,
+            height: Dimensions.height50,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              color: Colors.grey[300],
+              width: Dimensions.width50,
+              height: Dimensions.height50,
+              child: const Icon(Icons.broken_image, color: Colors.grey),
+            ),
           ),
         ),
         SizedBox(width: Dimensions.width12),
@@ -74,7 +163,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             children: [
               Text(
                 item.productName,
-                style: TextStyle(fontSize: Dimensions.font16, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: Dimensions.font16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               SizedBox(height: Dimensions.height5),
               Text('Giá: ${_formatCurrency(item.price)}đ'),
@@ -90,10 +182,37 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
   }
 
+  Widget _buildTotalSection() {
+    double total = items.fold(0.0, (sum, item) => sum + item.total);
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(Dimensions.width15),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade200,
+        border: Border(top: BorderSide(color: Colors.grey.shade400)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Tổng cộng:',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          Text(
+            '${_formatCurrency(total)}đ',
+            style: const TextStyle(
+                color: Colors.orange,
+                fontSize: 16,
+                fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _formatCurrency(double amount) {
-    return amount
-        .toStringAsFixed(0)
-        .replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (match) => '${match[1]},');
+    return amount.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]}.',
+    );
   }
 
   String _formatOrderCode(int id) => '#DH$id';

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontendtn1/views/product/product_detail/product_detail_screen.dart';
 import 'package:intl/intl.dart';
 import '../../../../utils/dimensions.dart';
 
@@ -14,25 +15,36 @@ class RelatedProductCard extends StatelessWidget {
     final String imageUrl = product['hinh_anh'] ?? '';
     final double rating = (product['danh_gia'] as num?)?.toDouble() ?? 4.5;
 
-    return Container(
-      width: Dimensions.screenWidth * 0.4,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(Dimensions.radius12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 6,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        // 👇 Khi bấm vào card, mở ProductDetailScreen với sản phẩm đó
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProductDetailScreen(product: product),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildImage(imageUrl),
-          Expanded(child: _buildInfo(name, rating, price)),
-        ],
+        );
+      },
+      child: Container(
+        width: Dimensions.screenWidth * 0.4,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(Dimensions.radius12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade300,
+              blurRadius: 6,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildImage(imageUrl),
+            Expanded(child: _buildInfo(name, rating, price)),
+          ],
+        ),
       ),
     );
   }

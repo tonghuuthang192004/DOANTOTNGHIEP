@@ -52,18 +52,35 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
     try {
       await DiscountService.saveDiscount(
         userId: widget.userId,
-        discountId: idMa, // ✅ đổi từ voucherId sang discountId
+        discountId: idMa,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Đã lưu mã thành công!")),
+        const SnackBar(
+          content: Text("✅ Đã lưu mã thành công!"),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
+      debugPrint('❌ Lỗi khi lưu mã: $e'); // Log lỗi cho dev xem khi test
+
+      // Xử lý lỗi để hiển thị thông báo phù hợp
+      String errorMsg = e.toString().toLowerCase();
+      String userMessage = '❌ Không thể lưu mã, vui lòng thử lại';
+
+      if (errorMsg.contains('tồn tại') || errorMsg.contains('đã có') || errorMsg.contains('duplicate')) {
+        userMessage = '⚠️ Bạn đã có mã này rồi';
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Lỗi: ${e.toString()}")),
+        SnackBar(
+          content: Text(userMessage),
+          backgroundColor: Colors.orange,
+        ),
       );
     }
   }
+
 
 
   @override
@@ -124,11 +141,13 @@ class _AvailableDiscountPageState extends State<AvailableDiscountPage> {
                     Text(
                       ma.loai == 'phan_tram'
                           ? "🔻 Giảm ${ma.giaTri}%"
-                          : "🔻 Giảm ${ma.giaTri.toStringAsFixed(0)}đ",
+                          : "Giam ${ma.giaTri}%",
                     ),
                     // Text("💰 Đơn tối thiểu: ${ma.dieuKien}đ"),
                     Text(
-                      "📅 HSD: ${ma.ketThuc.toLocal().toString().substring(0, 10)}",
+
+
+                      "📅 HSD:${ma.batDau.toLocal().toString().substring(0, 10)} - ${ma.ketThuc.toLocal().toString().substring(0, 10)}",
                     ),
                   ],
                 ),

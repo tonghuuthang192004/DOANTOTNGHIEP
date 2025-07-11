@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/address/address_model.dart';
 import '../../../controllers/address/address_controller.dart';
 import '../../../services/user/user_session.dart';
+import '../../views/change_address/address_dialog.dart';
 
 class DeliveryInfoSection extends StatefulWidget {
   final String note;
@@ -39,12 +40,11 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
     super.dispose();
   }
 
+  // Hàm tải địa chỉ mặc định
   Future<void> _loadDefaultAddress() async {
-    // Lấy userId để có thể gọi controller (nếu cần, hoặc dùng token trong service)
     final userId = await UserSession.getUserId();
 
     if (userId != null) {
-      // Gọi getAddresses() không truyền tham số vì hàm không nhận userId
       final addresses = await AddressController().getAddresses();
 
       if (addresses.isNotEmpty) {
@@ -59,117 +59,40 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
     }
   }
 
-
-  void _openAddressDialog({AddressModel? initial}) {
-    final nameController = TextEditingController(text: initial?.name ?? '');
-    final phoneController = TextEditingController(text: initial?.phone ?? '');
-    final addressController = TextEditingController(text: initial?.address ?? '');
-    bool makeDefault = initial?.isDefault ?? true;
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
+  // Hàm mở dialog để thêm địa chỉ mới
+  Future<void> _openAddAddressDialog() async {
+    final AddressModel? address = await showDialog<AddressModel>(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(initial == null ? "Thêm địa chỉ" : "Cập nhật địa chỉ"),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        decoration: const InputDecoration(labelText: 'Tên người nhận'),
-                        validator: (value) => (value == null || value.trim().isEmpty)
-                            ? 'Vui lòng nhập tên người nhận'
-                            : null,
-                      ),
-                      TextFormField(
-                        controller: phoneController,
-                        decoration: const InputDecoration(labelText: 'Số điện thoại'),
-                        keyboardType: TextInputType.phone,
-                        validator: (value) => (value == null || value.trim().isEmpty)
-                            ? 'Vui lòng nhập số điện thoại'
-                            : null,
-                      ),
-                      TextFormField(
-                        controller: addressController,
-                        decoration: const InputDecoration(labelText: 'Địa chỉ'),
-                        validator: (value) => (value == null || value.trim().isEmpty)
-                            ? 'Vui lòng nhập địa chỉ'
-                            : null,
-                      ),
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: makeDefault,
-                            onChanged: (v) => setDialogState(() {
-                              makeDefault = v ?? false;
-                            }),
-                          ),
-                          const Text("Đặt làm mặc định"),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    nameController.dispose();
-                    phoneController.dispose();
-                    addressController.dispose();
-                    Navigator.pop(context);
-                  },
-                  child: const Text("Huỷ"),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!formKey.currentState!.validate()) return;
-
-                    final userId = await UserSession.getUserId();
-                    if (userId == null) {
-                      // Bạn có thể show snackbar báo lỗi user chưa đăng nhập
-                      return;
-                    }
-
-                    final newAddress = AddressModel(
-                      id: initial?.id ?? 0,
-                      userId: userId,
-                      name: nameController.text.trim(),
-                      phone: phoneController.text.trim(),
-                      address: addressController.text.trim(),
-                      isDefault: makeDefault,
-                    );
-
-                    try {
-                      if (initial == null) {
-                        await AddressController().addAddress(newAddress);
-                      } else {
-                        await AddressController().updateAddress(newAddress);
-                      }
-                      Navigator.pop(context);
-                      nameController.dispose();
-                      phoneController.dispose();
-                      addressController.dispose();
-                      await _loadDefaultAddress();
-                    } catch (e) {
-                      // Có thể show snackbar lỗi lưu địa chỉ
-                      // Ví dụ: _showSnackBar('Lỗi lưu địa chỉ: $e');
-                    }
-                  },
-                  child: const Text("Lưu"),
-                ),
-              ],
-            );
-          },
-        );
+      builder: (BuildContext context) {
+        return AddressDialog(address: null, onSave: (AddressModel newAddress) {
+          _saveNewAddress(newAddress);
+        });
       },
     );
+
+    // Nếu có địa chỉ mới, cập nhật giao diện
+    if (address != null) {
+      setState(() {
+        selectedAddress = address;
+      });
+      widget.onAddressChanged(address);  // Cập nhật lại địa chỉ khi có thay đổi
+    }
+  }
+
+  // Hàm lưu địa chỉ mới vào cơ sở dữ liệu
+  Future<void> _saveNewAddress(AddressModel newAddress) async {
+    try {
+      // Lưu địa chỉ vào database qua AddressController
+      await AddressController().addAddress(newAddress);
+
+      // Cập nhật lại địa chỉ mặc định sau khi thêm
+      _loadDefaultAddress();
+    } catch (e) {
+      // Xử lý lỗi khi không thể thêm địa chỉ
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Không thể thêm địa chỉ: ${e.toString()}"),
+      ));
+    }
   }
 
   @override
@@ -203,10 +126,11 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: () => _openAddressDialog(initial: selectedAddress),
-                icon: const Icon(Icons.edit, color: Colors.grey),
-              ),
+              // Thêm nút thêm địa chỉ
+              // IconButton(
+              //   icon: const Icon(Icons.add_location_alt, color: Colors.green),
+              //   onPressed: _openAddAddressDialog,  // Gọi hàm mở dialog để thêm địa chỉ
+              // ),
             ],
           ),
           const SizedBox(height: 16),
@@ -238,9 +162,9 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
                       setState(() => isEditingNote = false);
                     },
                     child: const Text("Huỷ"),
-                  )
+                  ),
                 ],
-              )
+              ),
             ],
           )
               : Row(
@@ -248,10 +172,12 @@ class _DeliveryInfoSectionState extends State<DeliveryInfoSection> {
               Expanded(child: Text(currentNote.isEmpty ? "Không có ghi chú." : currentNote)),
               IconButton(
                 icon: const Icon(Icons.edit),
-                onPressed: () => setState(() => isEditingNote = true),
+                onPressed: selectedAddress == null // Chỉ cho phép chỉnh sửa nếu có địa chỉ
+                    ? null
+                    : () => setState(() => isEditingNote = true),
               ),
             ],
-          )
+          ),
         ],
       ),
     );

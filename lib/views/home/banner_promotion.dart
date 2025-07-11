@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../utils/dimensions.dart';
 
@@ -9,15 +10,52 @@ class BannerPromotion extends StatefulWidget {
 class _BannerPromotionState extends State<BannerPromotion> {
   final PageController _pageController = PageController(viewportFraction: 0.9);
   final List<String> _imageList = [
-    'images/fried_chicken.png',
-    'images/fried_chicken.png',
-    'images/fried_chicken.png',
+    'images/banner_1.jpg',
+    'images/banner_2.jpg',
+    'images/banner_3.jpg',
+    'images/banner_4.jpg',
   ];
 
   int _currentPage = 0;
+  late Timer _timer;
+  bool _isForward = true; // Để điều khiển lướt tới hay lướt lui
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(Duration(milliseconds: 1500), (Timer timer) {
+      if (_pageController.hasClients) {
+        if (_isForward) {
+          if (_currentPage < _imageList.length - 1) {
+            _currentPage++;
+          } else {
+            _isForward = false;
+            _currentPage--;
+          }
+        } else {
+          if (_currentPage > 0) {
+            _currentPage--;
+          } else {
+            _isForward = true;
+            _currentPage++;
+          }
+        }
+        _pageController.animateToPage(
+          _currentPage,
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _timer.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -71,23 +109,6 @@ class _BannerPromotionState extends State<BannerPromotion> {
                             ),
                           ),
                         ),
-                        // Positioned(
-                        //   left: 20,
-                        //   bottom: 20,
-                        //   child: Column(
-                        //     crossAxisAlignment: CrossAxisAlignment.start,
-                        //     children: [
-                        //       Text("Giảm 30%",
-                        //           style: TextStyle(
-                        //               color: Colors.white,
-                        //               fontSize: 24,
-                        //               fontWeight: FontWeight.bold)),
-                        //       Text("Cho đơn hàng đầu tiên",
-                        //           style: TextStyle(
-                        //               color: Colors.white70, fontSize: 16)),
-                        //     ],
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),
