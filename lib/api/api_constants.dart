@@ -27,7 +27,9 @@ class API {
 
   // 🛍️ Product APIs
   static const String getAllProducts = '$baseUrl/products';
-  static String searchProducts(String keyword) => '$baseUrl/admin/products?search=$keyword';
+  static String searchProducts(String keyword) =>
+      '$baseUrl/products/search?keyword=$keyword';
+
   static const String getHotProducts = '$baseUrl/products/hot';
   static String getProductById(int id) => '$baseUrl/products/$id';
   static String getRelatedProducts(int categoryId, int productId) => '$baseUrl/products/category/$categoryId/related/$productId';

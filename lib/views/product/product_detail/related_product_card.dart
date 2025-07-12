@@ -50,32 +50,42 @@ class RelatedProductCard extends StatelessWidget {
   }
 
   Widget _buildImage(String imageUrl) {
-    final placeholder = Container(
-      height: Dimensions.screenHeight * 0.12,
-      width: double.infinity,
-      color: Colors.orange.shade50,
-      child: Icon(
-        Icons.fastfood,
-        size: Dimensions.iconSize30 * 2,
-        color: Colors.white.withOpacity(0.8),
-      ),
-    );
+    final String fullImageUrl = (imageUrl.startsWith('http') || imageUrl.startsWith('https'))
+        ? imageUrl
+        : 'http://10.0.2.2:3000/uploads/$imageUrl'; // 👈 Sửa URL cho emulator hoặc backend
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(
         top: Radius.circular(Dimensions.radius12),
       ),
-      child: imageUrl.isNotEmpty
-          ? Image.network(
-        imageUrl,
+      child: Image.network(
+        fullImageUrl,
         height: Dimensions.screenHeight * 0.12,
         width: double.infinity,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => placeholder,
-      )
-          : placeholder,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            height: Dimensions.screenHeight * 0.12,
+            color: Colors.orange.shade50,
+            alignment: Alignment.center,
+            child: const CircularProgressIndicator(),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) => Container(
+          height: Dimensions.screenHeight * 0.12,
+          color: Colors.orange.shade50,
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.broken_image,
+            size: Dimensions.iconSize30 * 2,
+            color: Colors.grey.withOpacity(0.6),
+          ),
+        ),
+      ),
     );
   }
+
 
   Widget _buildInfo(String name, double rating, double price) {
     return Padding(

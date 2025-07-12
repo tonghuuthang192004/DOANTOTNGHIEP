@@ -134,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: Dimensions.width20),
                 child: Text(
-                  "Sản phẩm phổ biến",
+                  "Sản phẩm nổi bật",
                   style: TextStyle(
                     fontSize: Dimensions.font20,
                     fontWeight: FontWeight.bold,

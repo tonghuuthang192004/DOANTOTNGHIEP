@@ -17,6 +17,7 @@ import 'bottom_bar_actions.dart';
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
 
+
   const ProductDetailScreen({Key? key, this.product}) : super(key: key);
 
   @override
@@ -61,6 +62,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return getBasePrice() * quantity;
   }
 
+  bool get isOutOfStock {
+    final status = widget.product?['trang_thai']?.toString().toLowerCase() ?? '';
+    return status != 'active';
+  }
+
+  void showOutOfStockMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Sản phẩm đã hết hàng"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Dimensions.init(context);
@@ -72,11 +87,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ProductImageAppBar(
             product: {
               ...?widget.product,
-              'id_san_pham': widget.product?['id'], // 👈 Thêm trường id_san_pham thủ công nếu cần
+              'id_san_pham': widget.product?['id'], // 👈 Thêm id_san_pham thủ công nếu cần
             },
             cartItemCount: 2,
           ),
-
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.all(Dimensions.width20),
@@ -90,14 +104,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   QuantitySelector(
                     quantity: quantity,
                     onIncrease: () {
-                      setState(() => quantity++);  // Không cần kiểm tra stockQuantity nữa
+                      setState(() => quantity++);
                     },
                     onDecrease: () {
                       if (quantity > 1) setState(() => quantity--);
                     },
                   ),
                   SizedBox(height: Dimensions.height20),
-                  // 👇 Thêm phần đánh giá sản phẩm
                   ProductReviewSection(
                     productId: widget.product?['id'],
                   ),
@@ -114,6 +127,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       bottomNavigationBar: BottomBarActions(
         totalPrice: getTotalPrice(),
         onAddToCart: () async {
+          if (isOutOfStock) {
+            showOutOfStockMessage();
+            return;
+          }
+
           try {
             final product = ProductModel.fromJson(widget.product!);
             await CartService.addToCart(product, quantity: quantity);
@@ -127,12 +145,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               MaterialPageRoute(builder: (_) => const CartPage()),
             );
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Lỗi khi thêm sản phẩm vào giỏ hàng")),
-            );
+            print('❌ Lỗi thêm vào giỏ hàng: $e');
           }
         },
         onBuyNow: () {
+          if (isOutOfStock) {
+            showOutOfStockMessage();
+            return;
+          }
+
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => CheckoutPage()),
