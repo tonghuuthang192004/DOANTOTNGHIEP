@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontendtn1/views/pay/payment_method_section.dart';
+import '../../models/paymethod.dart';
 import '../../services/cart/cart_service.dart';
 import '../../services/order/order_service.dart';
 import '../../utils/dimensions.dart';
@@ -167,7 +168,10 @@ class _CheckoutPageState extends State<CheckoutPage> with TickerProviderStateMix
             _showSuccessDialog("✅ Thanh toán MoMo thành công");
             await CartService.clearCart();
           } else {
+            await CartService.fetchCart();
+
             _showErrorSnack("❌ Thanh toán bị hủy hoặc thất bại");
+            await OrderService.cancelOrder(orderId);
           }
         } else {
           _showErrorSnack("❌ Không thể tạo thanh toán MoMo");

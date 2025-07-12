@@ -33,7 +33,7 @@ class OrderService {
 
       // Check if trang_thai is valid and set the query parameters accordingly
       final queryParams = {
-        if (cleanTrangThai != null && cleanTrangThai.isNotEmpty) 'trang_thai': cleanTrangThai,
+        if (cleanTrangThai != null && cleanTrangThai.isNotEmpty) 'status': cleanTrangThai,
       };
 
       // Build the final URL, making sure 'trang_thai' is included if it's not empty

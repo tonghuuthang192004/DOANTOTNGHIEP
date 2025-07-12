@@ -56,7 +56,7 @@ class API {
   static String orderDetail(int id) => '$baseUrl/order/$id';
   static String cancelOrder(int id) => '$baseUrl/order/$id/cancel';
   static String reorder(int id) => '$baseUrl/order/$id/reorder';
-
+  static String deleleted(int id)=> '$baseUrl/admin/order/deleted/$id';
 // ⭐ Đánh giá sản phẩm - sửa thành đúng đường dẫn backend
   static String rateProduct(int productId) => '$baseUrl/order/$productId/review';
 // 📥 Lấy danh sách đánh giá của 1 sản phẩm
