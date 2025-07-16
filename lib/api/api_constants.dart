@@ -27,7 +27,9 @@ class API {
 
   // 🛍️ Product APIs
   static const String getAllProducts = '$baseUrl/products';
-  static String searchProducts(String keyword) => '$baseUrl/admin/products?search=$keyword';
+  static String searchProducts(String keyword) =>
+      '$baseUrl/products/search?keyword=$keyword';
+
   static const String getHotProducts = '$baseUrl/products/hot';
   static String getProductById(int id) => '$baseUrl/products/$id';
   static String getRelatedProducts(int categoryId, int productId) => '$baseUrl/products/category/$categoryId/related/$productId';
@@ -54,7 +56,7 @@ class API {
   static String orderDetail(int id) => '$baseUrl/order/$id';
   static String cancelOrder(int id) => '$baseUrl/order/$id/cancel';
   static String reorder(int id) => '$baseUrl/order/$id/reorder';
-
+  static String deleleted(int id)=> '$baseUrl/admin/order/deleted/$id';
 // ⭐ Đánh giá sản phẩm - sửa thành đúng đường dẫn backend
   static String rateProduct(int productId) => '$baseUrl/order/$productId/review';
 // 📥 Lấy danh sách đánh giá của 1 sản phẩm

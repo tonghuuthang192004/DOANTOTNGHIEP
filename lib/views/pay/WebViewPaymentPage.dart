@@ -1,5 +1,7 @@
+
 import 'package:flutter/material.dart';
 import 'package:frontendtn1/widgets/bottom_navigation_bar.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../services/cart/cart_service.dart';
@@ -87,9 +89,33 @@ class _WebViewPaymentPageState extends State<WebViewPaymentPage> {
         ),
         body: Stack(
           children: [
-            WebViewWidget(controller: _controller),
-            if (isLoading)
-              const Center(child: CircularProgressIndicator(color: Colors.pink)),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+
+
+                Container(
+                  margin: EdgeInsets.symmetric(horizontal: 40,vertical: 40),
+                  alignment: Alignment.topCenter,
+                  child:      QrImageView(data: widget.url,size: 300,),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 40,vertical: 40),
+                  child: Text('Bạn Vui Lòng Thanh Toán Qua MoMo',style: TextStyle(
+                    color: Colors.blueAccent,
+                    fontWeight: FontWeight.bold,
+
+                    fontSize: 30,
+                  ),
+                    textAlign: TextAlign.center,
+
+                  ),
+                )
+
+              ],
+            ),
+
           ],
         ),
       ),

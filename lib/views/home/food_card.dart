@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/product/product_model.dart';
 import '../../utils/dimensions.dart';
 import 'package:intl/intl.dart';
+
 class FoodCard extends StatelessWidget {
   final ProductModel food;
   final VoidCallback onTap;
@@ -15,9 +16,9 @@ class FoodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap, // ✅ Vẫn cho phép bấm xem chi tiết
       child: Container(
-        height: Dimensions.height280, // Giới hạn chiều cao toàn card
+        height: Dimensions.height280,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(Dimensions.radius20),
           color: Colors.white,
@@ -31,25 +32,48 @@ class FoodCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(Dimensions.radius20),
-              ),
-              child: Image.network(
-                food.hinhAnh.startsWith('http') || food.hinhAnh.startsWith('https')
-                    ? food.hinhAnh
-                    : 'http://10.0.2.2:3000/uploads/${food.hinhAnh}',
-                width: double.infinity,
-                height: Dimensions.height100,// Điều chỉnh theo yêu cầu của bạn
-                fit: BoxFit.cover,       // Điều chỉnh cách hiển thị hình ảnh
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(Dimensions.radius20),
+                  ),
+                  child: Image.network(
+                    food.hinhAnh.startsWith('http') ||
+                            food.hinhAnh.startsWith('https')
+                        ? food.hinhAnh
+                        : 'http://10.0.2.2:3000/uploads/${food.hinhAnh}',
                     width: double.infinity,
-                    color: Colors.grey[200],
-                    child: Icon(Icons.broken_image, color: Colors.grey),
-                  );
-                },
-              )
+                    height: Dimensions.height100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: double.infinity,
+                        color: Colors.grey[200],
+                        height: Dimensions.height100,
+                        child: Icon(Icons.broken_image, color: Colors.grey),
+                      );
+                    },
+                  ),
+                ),
+
+                // 👇 Hiển thị chữ "HẾT HÀNG" trên ảnh nếu Đã hủy
+                if (food.trangThai == 'Đã hủy') // 🌟 Hiện overlay nếu hết hàng
+                  Positioned.fill(
+                    child: Container(
+                      alignment: Alignment.center,
+                      color: Colors.black.withOpacity(0.5),
+                      child: Text(
+                        'HẾT HÀNG',
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: Dimensions.font16,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             Flexible(
               fit: FlexFit.loose,
@@ -57,7 +81,7 @@ class FoodCard extends StatelessWidget {
                 padding: EdgeInsets.all(Dimensions.height10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // ✅ sửa chỗ này
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       food.ten,
@@ -91,7 +115,6 @@ class FoodCard extends StatelessWidget {
                             color: Colors.grey[600],
                           ),
                         ),
-                        SizedBox(width: Dimensions.width5),
                       ],
                     ),
                   ],

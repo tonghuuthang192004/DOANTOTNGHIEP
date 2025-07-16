@@ -6,7 +6,7 @@ class ProductModel {
   final String hinhAnh;
   final double danhGia;
   final int? danhMucId;
-  final int soLuongkho;
+  final String trangThai; // 🌟 Thêm trạng thái
 
   ProductModel({
     required this.id,
@@ -16,12 +16,16 @@ class ProductModel {
     required this.hinhAnh,
     required this.danhGia,
     required this.danhMucId,
-    required this.soLuongkho, // Thêm trường này vào constructor
-
+    required this.trangThai,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
-    print('Parsing product data: $json');  // In toàn bộ dữ liệu JSON
+    print('🛠 Parsing product data: $json'); // 📝 In toàn bộ dữ liệu JSON
+
+    // 👉 Lấy trạng thái theo thứ tự ưu tiên
+    final trangThaiFromApi = json['trang_thai'] ?? json['status'] ?? 'unknown';
+
+    print('📦 Tên: ${json['ten'] ?? json['ten_san_pham']} | Trạng thái: $trangThaiFromApi');
 
     return ProductModel(
       id: json['id'] ?? json['id_san_pham'] ?? 0,
@@ -35,11 +39,9 @@ class ProductModel {
           ? double.tryParse(json['danh_gia'].toString()) ?? 0.0
           : 0.0,
       danhMucId: json['danh_muc_id'] ?? json['id_danh_muc'],
-      soLuongkho: json['so_luong_kho'] ?? 0, // Thêm dòng này để parse số lượng tồn kho
-
+      trangThai: trangThaiFromApi,
     );
   }
-
 
   Map<String, dynamic> toJson() {
     return {
@@ -50,7 +52,7 @@ class ProductModel {
       'hinh_anh': hinhAnh,
       'danh_gia': danhGia,
       'danh_muc_id': danhMucId,
-      'so_luong_ton': soLuongkho, // Thêm dòng này để đưa số lượng tồn kho vào JSON
+      'trang_thai': trangThai,
     };
   }
 }

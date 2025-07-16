@@ -19,9 +19,9 @@ import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
     return NumberFormat.currency(locale: 'vi_VN', symbol: '₫').format(amount);
   }
 
-  int get stockQuantity {
-    return cart.product.soLuongkho;  // Lấy số lượng trong kho
-  }
+  // int get stockQuantity {
+  //   return cart.product.soLuongkho;  // Lấy số lượng trong kho
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -88,16 +88,16 @@ import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
                         ),
                       ),
                       // Thông tin số lượng còn lại
-                      Expanded(
-                        child: Text(
-                          "Sản phẩm còn lại: ${cart.product.soLuongkho}",
-                          style: TextStyle(
-                            color: Colors.black45,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.end,
-                        ),
-                      ),
+                      // Expanded(
+                      //   child: Text(
+                      //     "Sản phẩm còn lại: ${cart.product.soLuongkho}",
+                      //     style: TextStyle(
+                      //       color: Colors.black45,
+                      //       fontSize: 14,
+                      //     ),
+                      //     textAlign: TextAlign.end,
+                      //   ),
+                      // ),
                     ],
                   ),
                   SizedBox(height: Dimensions.height10),
@@ -113,7 +113,7 @@ import 'package:intl/intl.dart';class CartItem extends StatelessWidget {
                       _quantityButton(
                         Icons.add,
                         onAdd,
-                        cart.quantity >= cart.product.soLuongkho,  // Kiểm tra xem số lượng giỏ hàng có vượt quá số lượng kho không
+                        false,  // Kiểm tra xem số lượng giỏ hàng có vượt quá số lượng kho không
                       ),
                       SizedBox(width: Dimensions.width10),
                       // Nút xóa sản phẩm

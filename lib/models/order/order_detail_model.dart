@@ -12,6 +12,7 @@ class OrderItemModel {
   final double price;            // ✅ Giá từng sản phẩm
   final int quantity;            // ✅ Số lượng
   final double total;            // ✅ Tổng giá (price * quantity)
+  final String status;           // 🛑 Trạng thái sản phẩm (active, Đã hủy, ...)
 
   OrderItemModel({
     required this.customerName,
@@ -24,6 +25,7 @@ class OrderItemModel {
     required this.price,
     required this.quantity,
     required this.total,
+    required this.status, // 👈 Thêm vào constructor
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class OrderItemModel {
       total: json['total'] is num
           ? (json['total'] as num).toDouble()
           : double.tryParse(json['total']?.toString() ?? '') ?? 0.0,
+      status: json['status']?.toString() ?? 'Đã hủy', // 👈 Map từ API
     );
   }
 }

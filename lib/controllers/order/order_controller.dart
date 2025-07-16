@@ -55,8 +55,8 @@ class OrderController {
   Future<Map<String, dynamic>> fetchOrderDetail(int orderId) async {
     try {
       return await OrderService.fetchOrderDetail(orderId);
-    } catch (e) {
-      debugPrint('❌ [OrderController] fetchOrderDetail error: $e');
+    } catch (e, stack) {
+      debugPrint('❌ [OrderController] fetchOrderDetail error: $e\n$stack');
       return {'order': null, 'items': <OrderItemModel>[]};
     }
   }

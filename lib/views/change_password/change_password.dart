@@ -18,6 +18,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final _confirmPasswordController = TextEditingController();
 
   final _visibility = {'current': false, 'new': false, 'confirm': false};
+  String? _currentPasswordError;
+  String? _newPasswordError;
+  String? _confirmPasswordError;
+
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -38,19 +43,26 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             children: [
               _securityNote(),
               SizedBox(height: Dimensions.height20),
-              _passwordField(_currentPasswordController, 'Mật khẩu hiện tại', 'current',
-                  validator: (v) =>
-                  v!.isEmpty ? 'Vui lòng nhập mật khẩu hiện tại' : null),
+              _passwordField(
+                _currentPasswordController,
+                'Mật khẩu hiện tại',
+                'current',
+                errorText: _currentPasswordError,
+              ),
               SizedBox(height: Dimensions.height15),
-              _passwordField(_newPasswordController, 'Mật khẩu mới', 'new',
-                  validator: _validateNewPassword),
+              _passwordField(
+                _newPasswordController,
+                'Mật khẩu mới',
+                'new',
+                errorText: _newPasswordError,
+              ),
               SizedBox(height: Dimensions.height15),
-              _passwordField(_confirmPasswordController, 'Xác nhận mật khẩu mới', 'confirm',
-                  validator: (v) {
-                    if (v!.isEmpty) return 'Vui lòng xác nhận mật khẩu';
-                    if (v != _newPasswordController.text) return 'Mật khẩu không khớp';
-                    return null;
-                  }),
+              _passwordField(
+                _confirmPasswordController,
+                'Xác nhận mật khẩu mới',
+                'confirm',
+                errorText: _confirmPasswordError,
+              ),
               SizedBox(height: Dimensions.height25),
               _changePasswordButton(),
               SizedBox(height: Dimensions.height20),
@@ -133,26 +145,34 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     );
   }
 
-  Widget _passwordField(TextEditingController controller, String label, String key,
-      {String? Function(String?)? validator}) {
-    return TextFormField(
-      controller: controller,
-      obscureText: !_visibility[key]!,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: const Icon(Icons.lock, color: Colors.orange),
-        suffixIcon: IconButton(
-          icon: Icon(_visibility[key]! ? Icons.visibility : Icons.visibility_off),
-          onPressed: () => setState(() => _visibility[key] = !_visibility[key]!),
-          color: Colors.grey,
+  Widget _passwordField(
+      TextEditingController controller, String label, String key,
+      {String? errorText}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: controller,
+          obscureText: !_visibility[key]!,
+          decoration: InputDecoration(
+            labelText: label,
+            prefixIcon: const Icon(Icons.lock, color: Colors.orange),
+            suffixIcon: IconButton(
+              icon: Icon(
+                  _visibility[key]! ? Icons.visibility : Icons.visibility_off),
+              onPressed: () =>
+                  setState(() => _visibility[key] = !_visibility[key]!),
+              color: Colors.grey,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(Dimensions.radius12),
+            ),
+            filled: true,
+            fillColor: Colors.white,
+            errorText: errorText,
+          ),
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimensions.radius12),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-      ),
+      ],
     );
   }
 
@@ -160,7 +180,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _changePassword,
+        onPressed: _isSubmitting ? null : _changePassword,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.orange,
           padding: EdgeInsets.symmetric(vertical: Dimensions.height15),
@@ -168,78 +188,93 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             borderRadius: BorderRadius.circular(Dimensions.radius12),
           ),
         ),
-        child: const Text('Đổi mật khẩu',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        child: _isSubmitting
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text('Đổi mật khẩu',
+            style: TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w600)),
       ),
     );
   }
 
-  String? _validateNewPassword(String? value) {
-    if (value!.isEmpty) return 'Vui lòng nhập mật khẩu mới';
-    if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự';
-    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) {
-      return 'Phải có chữ hoa, chữ thường và số';
-    }
-    return null;
-  }
-
   Future<void> _changePassword() async {
-    if (_formKey.currentState!.validate()) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Xác nhận đổi mật khẩu'),
-          content: const Text('Bạn có chắc chắn muốn đổi mật khẩu không?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-              child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
-            ),
-          ],
+    setState(() {
+      _currentPasswordError = null;
+      _newPasswordError = null;
+      _confirmPasswordError = null;
+      _isSubmitting = true;
+    });
+
+    final oldPassword = _currentPasswordController.text.trim();
+    final newPassword = _newPasswordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+
+    bool hasError = false;
+
+    if (oldPassword.isEmpty) {
+      _currentPasswordError = 'Vui lòng nhập mật khẩu hiện tại';
+      hasError = true;
+    }
+    if (newPassword.isEmpty) {
+      _newPasswordError = 'Vui lòng nhập mật khẩu mới';
+      hasError = true;
+    } else if (newPassword.length < 8 ||
+        !RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(newPassword)) {
+      _newPasswordError = 'Mật khẩu yếu: ≥8 ký tự, chữ hoa, chữ thường, số';
+      hasError = true;
+    }
+    if (confirmPassword != newPassword) {
+      _confirmPasswordError = 'Mật khẩu xác nhận không khớp';
+      hasError = true;
+    }
+
+    if (hasError) {
+      setState(() {
+        _isSubmitting = false;
+      });
+      return;
+    }
+
+    final controller = ChangePasswordController();
+    final result = await controller.changePassword(
+        oldPassword: oldPassword, newPassword: newPassword);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isSubmitting = false;
+    });
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Đổi mật khẩu thành công!'),
+          backgroundColor: Colors.green,
         ),
       );
 
-      if (confirm == true) {
-        final controller = ChangePasswordController();
-        final result = await controller.changePassword(
-          oldPassword: _currentPasswordController.text,
-          newPassword: _newPasswordController.text,
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('token');
+
+      Future.delayed(const Duration(seconds: 1), () {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
         );
-
-        if (!mounted) return;
-
-        if (result['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Đổi mật khẩu thành công!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('token');
-
-          Future.delayed(const Duration(seconds: 1), () {
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-            );
-          });
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message'] ?? '❌ Đổi mật khẩu thất bại'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      });
+    } else {
+      String errorMessage = result['message'] ?? '❌ Đổi mật khẩu thất bại';
+      if (errorMessage.contains('Mật khẩu cũ không đúng')) {
+        _currentPasswordError = errorMessage;
+      } else if (errorMessage.contains('Mật khẩu mới yếu')) {
+        _newPasswordError = errorMessage;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+        );
       }
+      setState(() {});
     }
   }
 }

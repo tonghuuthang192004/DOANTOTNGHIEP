@@ -1,27 +1,10 @@
 import 'package:flutter/material.dart';
-
-class PaymentMethod {
-  final String id;
-  final String name;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final Color backgroundColor;
-
-  PaymentMethod({
-    required this.id,
-    required this.name,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.backgroundColor,
-  });
-}
-
+import '../../models/paymethod.dart';
 class PaymentMethodSection extends StatelessWidget {
   final List<PaymentMethod> paymentMethods;
   final String selectedId;
   final void Function(String id) onSelected;
+
 
   const PaymentMethodSection({
     super.key,

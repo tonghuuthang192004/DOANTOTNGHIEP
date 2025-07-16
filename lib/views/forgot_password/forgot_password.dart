@@ -26,6 +26,15 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       return;
     }
 
+    // 📧 Validate định dạng email
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    if (!emailRegex.hasMatch(email)) {
+      setState(() {
+        _message = '📧 Email không hợp lệ.';
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _message = null;
@@ -40,12 +49,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       );
 
       final data = jsonDecode(response.body);
-      if (response.statusCode == 200) {
+      print('📦 API Response: $data'); // 🔥 Debug API response
+
+      if (response.statusCode == 200 && data['success'] == true) {
         setState(() {
-          _message = data['message'];
+          _message = '✅ Nếu email tồn tại, mã OTP đã được gửi.';
         });
 
-        // 👉 Điều hướng đến ResetPasswordPage
+        // 👉 Chỉ chuyển trang nếu success true
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -54,7 +65,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         );
       } else {
         setState(() {
-          _message = data['error'] ?? '❌ Gửi email thất bại.';
+          _message = '❌ Nếu email chưa được đăng ký, hãy kiểm tra lại.';
         });
       }
     } catch (e) {
@@ -123,7 +134,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           padding: const EdgeInsets.symmetric(vertical: 15),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         ),
-                        onPressed: _sendForgotPasswordEmail,
+                        onPressed: _isLoading ? null : _sendForgotPasswordEmail,
                         icon: const Icon(Icons.send),
                         label: const Text(
                           'Gửi mã xác minh',
@@ -136,7 +147,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           _message!,
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: _message!.contains('thành công') ? Colors.green : Colors.red,
+                            color: _message!.startsWith('✅') ? Colors.green : Colors.red,
                             fontSize: 14,
                           ),
                         ),

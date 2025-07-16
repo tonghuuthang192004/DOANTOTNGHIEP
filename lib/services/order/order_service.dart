@@ -20,7 +20,8 @@ class OrderService {
       'Authorization': 'Bearer $token',
       if (isJson) 'Content-Type': 'application/json',
     };
-  }/// 📦 Lấy danh sách đơn hàng
+  }
+  /// 📦 Lấy danh sách đơn hàng
   /// 📦 Lấy danh sách đơn hàng
   /// 📦 Lấy danh sách đơn hàng
   static Future<List<OrderModel>> fetchOrders({String? trang_thai, required int userId}) async {
@@ -32,7 +33,7 @@ class OrderService {
 
       // Check if trang_thai is valid and set the query parameters accordingly
       final queryParams = {
-        if (cleanTrangThai != null && cleanTrangThai.isNotEmpty) 'trang_thai': cleanTrangThai,
+        if (cleanTrangThai != null && cleanTrangThai.isNotEmpty) 'status': cleanTrangThai,
       };
 
       // Build the final URL, making sure 'trang_thai' is included if it's not empty
@@ -65,6 +66,7 @@ class OrderService {
 
 
 
+  /// 📦 Lấy chi tiết đơn hàng
   static Future<Map<String, dynamic>> fetchOrderDetail(int orderId) async {
     final headers = await getAuthHeader();
     final res = await http.get(Uri.parse(API.orderDetail(orderId)), headers: headers);
@@ -73,7 +75,7 @@ class OrderService {
       final body = jsonDecode(res.body);
       final data = body['data'];
 
-      if (data is List) {
+      if (data is List && data.isNotEmpty) {
         final parsedItems = data
             .whereType<Map<String, dynamic>>()
             .map(OrderItemModel.fromJson)
@@ -90,18 +92,20 @@ class OrderService {
           'paymentStatus': firstItem.paymentStatus,
         }
             : null;
+
         return {
           'order': orderInfo,
           'items': parsedItems,
         };
-      }
-      else {
-        throw Exception('Dữ liệu data không đúng định dạng');
+      } else {
+        throw Exception('⚠️ Không có dữ liệu đơn hàng');
       }
     } else {
-      throw Exception('Lỗi khi lấy chi tiết đơn hàng: ${res.body}');
+      debugPrint('❌ fetchOrderDetail lỗi: ${res.body}');
+      throw Exception('Lỗi khi lấy chi tiết đơn hàng: ${res.statusCode}');
     }
   }
+
 
   /// ❌ Hủy đơn hàng
   static Future<bool> cancelOrder(int orderId) async {

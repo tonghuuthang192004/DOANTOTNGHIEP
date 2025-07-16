@@ -179,15 +179,17 @@ class UserService {
       );
       final decoded = jsonDecode(response.body);
       print('📦 [Change Password] Response: $decoded');
+
       return {
-        'success': decoded['success'] == true,
-        'message': decoded['message'] ?? 'Đổi mật khẩu thành công'
+        'success': response.statusCode == 200,
+        'message': decoded['message'] ?? 'Đổi mật khẩu thành công',
       };
     } catch (e) {
       print('❌ [Change Password] Error: $e');
       return {'success': false, 'message': 'Lỗi kết nối: $e'};
     }
   }
+
 
   /// 👤 Lấy profile người dùng
   Future<Map<String, dynamic>> getProfile() async {

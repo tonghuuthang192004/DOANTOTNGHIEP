@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../controllers/user/register_controller.dart';
 import '../../models/user/user_model.dart';
 import '../../utils/dimensions.dart';
+import '../login/login_screen.dart';
 import 'VerifyEmailScreen.dart';
-
 
 class RegisterForm extends StatefulWidget {
   const RegisterForm({super.key});
@@ -56,7 +56,7 @@ class _RegisterFormState extends State<RegisterForm> {
       user,
           () {
         _clearForm();
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => VerifyEmailScreen(
@@ -86,60 +86,81 @@ class _RegisterFormState extends State<RegisterForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        children: [
-          _buildField('Họ tên', _tenController),
-          SizedBox(height: Dimensions.height20),
-          _buildField(
-            'Email',
-            _emailController,
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Vui lòng nhập Email';
-              final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-              if (!emailRegex.hasMatch(value)) return 'Email không hợp lệ';
-              return null;
-            },
-          ),
-          SizedBox(height: Dimensions.height20),
-          _buildField(
-            'Số điện thoại',
-            _soDienThoaiController,
-            keyboardType: TextInputType.phone,
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Vui lòng nhập số điện thoại';
-              if (!RegExp(r'^\d{10,11}$').hasMatch(value)) return 'Số điện thoại không hợp lệ';
-              return null;
-            },
-          ),
-          SizedBox(height: Dimensions.height20),
-          _buildPasswordField('Mật khẩu', _matKhauController, _passwordVisible, () {
-            setState(() => _passwordVisible = !_passwordVisible);
-          }),
-          SizedBox(height: Dimensions.height20),
-          _buildPasswordField('Xác nhận mật khẩu', _xacNhanMatKhauController, _confirmVisible, () {
-            setState(() => _confirmVisible = !_confirmVisible);
-          }),
-          SizedBox(height: Dimensions.height25),
-          SizedBox(
-            width: double.infinity,
-            height: Dimensions.height50,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF5722),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(Dimensions.radius12),
-                ),
-              ),
-              onPressed: _isLoading ? null : _submit,
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                  : const Text('Đăng ký', style: TextStyle(color: Colors.white)),
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(Dimensions.width20),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildField(
+              'Họ tên', _tenController,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) return '⚠️ Họ tên không được để trống';
+                return null;
+              },
             ),
-          ),
-        ],
+            SizedBox(height: Dimensions.height20),
+            _buildField(
+              'Email',
+              _emailController,
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) return '⚠️ Vui lòng nhập email';
+                final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+                if (!emailRegex.hasMatch(value)) return '⚠️ Email không hợp lệ';
+                return null;
+              },
+            ),
+            SizedBox(height: Dimensions.height20),
+            _buildField(
+              'Số điện thoại',
+              _soDienThoaiController,
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) return '⚠️ Vui lòng nhập số điện thoại';
+                if (!RegExp(r'^0\d{9}$').hasMatch(value)) return '⚠️ Số điện thoại phải đủ 10 số và bắt đầu bằng 0';
+                return null;
+              },
+            ),
+            SizedBox(height: Dimensions.height20),
+            _buildPasswordField('Mật khẩu', _matKhauController, _passwordVisible, () {
+              setState(() => _passwordVisible = !_passwordVisible);
+            }),
+            SizedBox(height: Dimensions.height20),
+            _buildPasswordField('Xác nhận mật khẩu', _xacNhanMatKhauController, _confirmVisible, () {
+              setState(() => _confirmVisible = !_confirmVisible);
+            }),
+            SizedBox(height: Dimensions.height25),
+            SizedBox(
+              width: double.infinity,
+              height: Dimensions.height50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF5722),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Dimensions.radius12),
+                  ),
+                ),
+                onPressed: _isLoading ? null : _submit,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                    : const Text('Đăng ký', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+            SizedBox(height: Dimensions.height15),
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              },
+              child: const Text('Bạn đã có tài khoản? Đăng nhập'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -150,7 +171,7 @@ class _RegisterFormState extends State<RegisterForm> {
       controller: controller,
       keyboardType: keyboardType,
       validator: validator ??
-              (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập $label' : null,
+              (value) => (value == null || value.isEmpty) ? '⚠️ Vui lòng nhập $label' : null,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(
@@ -169,8 +190,10 @@ class _RegisterFormState extends State<RegisterForm> {
       controller: controller,
       obscureText: !visible,
       validator: (value) {
-        if (value == null || value.length < 6) {
-          return 'Mật khẩu tối thiểu 6 ký tự';
+        if (value == null || value.isEmpty) return '⚠️ Vui lòng nhập $label';
+        final passwordRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$');
+        if (!passwordRegex.hasMatch(value)) {
+          return '⚠️ Mật khẩu phải >=8 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt';
         }
         return null;
       },
