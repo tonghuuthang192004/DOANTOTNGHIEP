@@ -26,7 +26,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   List<OrderModel> orders = [];
   bool isLoading = false;
-  String selectedFilter = 'Tất Cả'; // Default filter set to "Tất Cả" (All)
+  String selectedFilter = 'Tất Cả';
   late int userId;
 
   @override
@@ -55,10 +55,9 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Future<void> _loadOrders() async {
     setState(() => isLoading = true);
     try {
-      debugPrint(
-          'Loading orders for userId: $userId with filter: $selectedFilter');
+      debugPrint('Loading orders for userId: $userId with filter: $selectedFilter');
       final fetched = await OrderService.fetchOrders(
-        trang_thai: selectedFilter,
+        trang_thai: selectedFilter == 'Tất Cả' ? null : selectedFilter,
         userId: userId,
       );
       debugPrint('Fetched Orders: $fetched');
@@ -94,18 +93,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Future<void> _cancelOrder(int orderId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) =>
-          AlertDialog(
-            title: const Text('Huỷ đơn hàng?'),
-            content: const Text(
-                'Bạn có chắc chắn muốn huỷ đơn hàng này không?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Không')),
-              ElevatedButton(onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Huỷ')),
-            ],
-          ),
+      builder: (_) => AlertDialog(
+        title: const Text('Huỷ đơn hàng?'),
+        content: const Text('Bạn có chắc chắn muốn huỷ đơn hàng này không?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Không')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Huỷ')),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -122,29 +117,28 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   Future<void> _reorder(int orderId) async {
     final success = await OrderService.reorder(orderId);
     if (success) {
-      _showSnackBar(
-          '🛒 Các sản phẩm đã được thêm lại giỏ hàng', color: Colors.green);
+      _showSnackBar('🛒 Các sản phẩm đã được thêm lại giỏ hàng', color: Colors.green);
     } else {
       _showSnackBar('❌ Mua lại thất bại', color: Colors.red);
     }
   }
 
   bool _canCancel(String status) {
-    return ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao hàng'].contains(status);
+    return status == 'Đang xử lý';
   }
 
   (Color, IconData) _getStatusStyle(String status) {
     final Map<String, (Color, IconData)> statusMap = {
-      'Đã giao': (Colors.green, Icons.check_circle),
-      'Đang giao': (Colors.blue, Icons.local_shipping),
-      'Đang chuẩn bị hàng': (Colors.deepOrange, Icons.kitchen),
-      'Xác nhận': (Colors.orange, Icons.access_time),
+      'Đang xử lý': (Colors.grey, Icons.hourglass_empty),
+      'Xác nhận': (Colors.blue, Icons.check_circle_outline),
+      'Đang chuẩn bị hàng': (Colors.amber, Icons.kitchen),
+      'Đang giao': (Colors.orange, Icons.local_shipping),
+      'Đã giao': (Colors.green, Icons.done_all),
       'Đã hủy': (Colors.red, Icons.cancel),
     };
-    return statusMap[status] ?? (Colors.grey, Icons.help_outline);
+    return statusMap[status] ?? (Colors.black45, Icons.help_outline);
   }
 
-  // The function to build filter buttons
   Widget _buildFilterButtons() {
     return Container(
       padding: EdgeInsets.symmetric(vertical: Dimensions.height8),
@@ -160,16 +154,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
           return ChoiceChip(
             label: Text(filter),
             selected: isSelected,
-            selectedColor: Colors.orange.shade200,
+            selectedColor: Colors.orange.shade300,
             backgroundColor: Colors.grey.shade300,
-            labelStyle: TextStyle(
-              color: isSelected ? Colors.white : Colors.black,
-            ),
+            labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
             onSelected: (_) {
               setState(() {
-                selectedFilter = filter; // Update filter
+                selectedFilter = filter;
               });
-              _loadOrders(); // Reload orders with the new filter
+              _loadOrders();
             },
           );
         },
@@ -177,7 +169,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
 
-  // Function to build the order card
   Widget _buildOrderCard(OrderModel order) {
     final (statusColor, statusIcon) = _getStatusStyle(order.status);
 
@@ -202,8 +193,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                       fontSize: Dimensions.font16, fontWeight: FontWeight.bold),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(Dimensions.radius20),
@@ -214,8 +204,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                       const SizedBox(width: 4),
                       Text(
                         order.status,
-                        style: TextStyle(
-                            color: statusColor, fontSize: Dimensions.font14),
+                        style: TextStyle(color: statusColor, fontSize: Dimensions.font14),
                       ),
                     ],
                   ),
@@ -226,17 +215,17 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             // Date & Total
             Row(
               children: [
-                Icon(Icons.calendar_today, size: 14,
-                    color: Colors.grey.shade600),
+                Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
                 const SizedBox(width: 6),
-                Text(order.formattedDate,
-                    style: TextStyle(fontSize: Dimensions.font14)),
+                Text(order.formattedDate, style: TextStyle(fontSize: Dimensions.font14)),
                 const Spacer(),
                 Text(
                   'Tổng: ${order.formattedPrice}đ',
-                  style: TextStyle(color: Colors.orange,
-                      fontWeight: FontWeight.bold,
-                      fontSize: Dimensions.font14),
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: Dimensions.font14,
+                  ),
                 ),
               ],
             ),
@@ -258,8 +247,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                     label: 'Huỷ',
                     color: Colors.red,
                   ),
-                if (order.status == 'Hoàn Thành') ...[
-                  // Use the correct order status
+                if (order.status == 'Đã giao') ...[
                   _buildActionButton(
                     onPressed: () => _reorder(order.id),
                     icon: Icons.shopping_cart,
@@ -294,7 +282,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
 
-  // Retry Button for Errors
   Widget _buildRetryButton() {
     return TextButton(
       onPressed: _loadOrders,
@@ -336,6 +323,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     );
   }
 }
+
+
 // }
 // import 'package:flutter/material.dart';
 // import 'package:frontendtn1/views/order_history_page/product_review_screen.dart';

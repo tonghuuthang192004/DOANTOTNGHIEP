@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/provincesController/provincesController.dart';
 import '../../models/address/address_model.dart';
-import '../../services/address/address_service.dart';
-import '../../utils/dimensions.dart';
 import '../../services/user/user_session.dart';
+import '../../utils/dimensions.dart';
 
 class AddressDialog extends StatefulWidget {
   final AddressModel? address;
@@ -13,14 +12,15 @@ class AddressDialog extends StatefulWidget {
   const AddressDialog({Key? key, this.address, required this.onSave}) : super(key: key);
 
   @override
-  _AddressDialogState createState() => _AddressDialogState();
+  State<AddressDialog> createState() => _AddressDialogState();
 }
 
 class _AddressDialogState extends State<AddressDialog> {
   late TextEditingController nameController;
   late TextEditingController phoneController;
   late TextEditingController addressController;
-  late bool isDefault;
+  bool isDefault = true;
+
   String? selectedCity;
   String? selectedDistrict;
   String? selectedWard;
@@ -31,223 +31,167 @@ class _AddressDialogState extends State<AddressDialog> {
     nameController = TextEditingController(text: widget.address?.name ?? '');
     phoneController = TextEditingController(text: widget.address?.phone ?? '');
     addressController = TextEditingController(text: widget.address?.address ?? '');
-    isDefault = widget.address?.isDefault ?? true; // Đặt mặc định là true khi tạo mới
+    isDefault = widget.address?.isDefault ?? true;
 
+    // Nếu có địa chỉ cũ thì set selectedCity/District/Ward
     selectedCity = widget.address?.city;
     selectedDistrict = widget.address?.district;
     selectedWard = widget.address?.ward;
-  }
 
-  String? getCityName(String? cityId) {
-    final cities = Provider.of<ProvincesController>(context, listen: false).cities;
-    return cities.firstWhere(
-          (city) => city.id.toString() == cityId,
-      orElse: () => City(id: -1, name: "Không tìm thấy thành phố"),
-    ).name;
-  }
-
-  String? getDistrictName(String? districtId) {
-    final districts = Provider.of<ProvincesController>(context, listen: false).districts;
-    return districts.firstWhere(
-          (district) => district.id.toString() == districtId,
-      orElse: () => District(id: -1, name: "Không tìm thấy quận/huyện"),
-    ).name;
-  }
-
-  String? getWardName(String? wardId) {
-    final wards = Provider.of<ProvincesController>(context, listen: false).wards;
-    return wards.firstWhere(
-          (ward) => ward.id.toString() == wardId,
-      orElse: () => Ward(id: -1, name: "Không tìm thấy phường/xã"),
-    ).name;
+    Future.microtask(() {
+      final provinces = Provider.of<ProvincesController>(context, listen: false);
+      provinces.loadCities().then((_) {
+        if (selectedCity != null) {
+          final city = provinces.cities.firstWhere(
+                (c) => c.name == selectedCity,
+            orElse: () => provinces.cities.first,
+          );
+          provinces.loadDistricts(city.id.toString()).then((_) {
+            if (selectedDistrict != null) {
+              final district = provinces.districts.firstWhere(
+                    (d) => d.name == selectedDistrict,
+                orElse: () => provinces.districts.first,
+              );
+              provinces.loadWards(district.id.toString());
+            }
+          });
+        }
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final provinces = Provider.of<ProvincesController>(context);
+
     return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Dimensions.radius15),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Dimensions.radius15)),
       title: Text(
         widget.address == null ? 'Thêm địa chỉ mới' : 'Sửa địa chỉ',
         style: TextStyle(fontSize: Dimensions.font18, color: Colors.orange),
       ),
       content: SingleChildScrollView(
-        child: Form(
-          child: Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blue.shade200, Colors.blue.shade400],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(Dimensions.radius15),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10.0,
-                  spreadRadius: 2.0,
-                ),
-              ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _customTextField(controller: nameController, label: 'Họ tên'),
+            SizedBox(height: Dimensions.height10),
+            _customTextField(controller: phoneController, label: 'Số điện thoại', type: TextInputType.phone),
+            SizedBox(height: Dimensions.height10),
+            _customTextField(controller: addressController, label: 'Địa chỉ chi tiết'),
+            SizedBox(height: Dimensions.height15),
+
+            // Dropdown Thành phố
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(labelText: "Thành phố"),
+              value: selectedCity,
+              items: provinces.cities.map((city) {
+                return DropdownMenuItem(
+                  value: city.name,
+                  child: Text(city.name),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedCity = value;
+                  selectedDistrict = null;
+                  selectedWard = null;
+                });
+                final city = provinces.cities.firstWhere((c) => c.name == value);
+                provinces.loadDistricts(city.id.toString());
+              },
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _customTextField(controller: nameController, label: 'Họ tên', validator: (v) => v!.isEmpty ? '⚠️ Nhập họ tên' : null),
-                SizedBox(height: Dimensions.height15),
-                _customTextField(
-                  controller: phoneController,
-                  label: 'Số điện thoại',
-                  type: TextInputType.phone,
-                  validator: (v) => v!.isEmpty
-                      ? '⚠️ Nhập số điện thoại'
-                      : (RegExp(r'^[0-9]{10,11}$').hasMatch(v) ? null : '⚠️ Số không hợp lệ'),
-                ),
-                SizedBox(height: Dimensions.height15),
-                _customTextField(controller: addressController, label: 'Địa chỉ', validator: (v) => v!.isEmpty ? '⚠️ Nhập địa chỉ' : null),
-                SizedBox(height: Dimensions.height15),
-                // City Dropdown
-                DropdownButton<String>(
-                  hint: Text("Chọn Thành Phố"),
-                  value: selectedCity,
-                  onChanged: (cityCode) {
-                    setState(() {
-                      selectedCity = cityCode;
-                      selectedDistrict = null;
-                      selectedWard = null;
-                    });
-                    Provider.of<ProvincesController>(context, listen: false).loadDistricts(cityCode!);
-                  },
-                  items: _buildCityDropdownItems(context),
-                ),
-                SizedBox(height: Dimensions.height15),
-                // District Dropdown
-                if (selectedCity != null)
-                  DropdownButton<String>(
-                    hint: Text("Chọn Quận/Huyện"),
-                    value: selectedDistrict,
-                    onChanged: (districtCode) {
-                      setState(() {
-                        selectedDistrict = districtCode;
-                        selectedWard = null;
-                      });
-                      Provider.of<ProvincesController>(context, listen: false).loadWards(districtCode!);
-                    },
-                    items: _buildDistrictDropdownItems(context),
-                  ),
-                SizedBox(height: Dimensions.height15),
-                // Ward Dropdown
-                if (selectedDistrict != null)
-                  DropdownButton<String>(
-                    hint: Text("Chọn Phường/Xã"),
-                    value: selectedWard,
-                    onChanged: (wardCode) {
-                      setState(() {
-                        selectedWard = wardCode;
-                      });
-                    },
-                    items: _buildWardDropdownItems(context),
-                  ),
-                SizedBox(height: Dimensions.height15),
-              ],
+            SizedBox(height: Dimensions.height10),
+
+            // Dropdown Quận/Huyện
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(labelText: "Quận/Huyện"),
+              value: selectedDistrict,
+              items: provinces.districts.map((district) {
+                return DropdownMenuItem(
+                  value: district.name,
+                  child: Text(district.name),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedDistrict = value;
+                  selectedWard = null;
+                });
+                final district = provinces.districts.firstWhere((d) => d.name == value);
+                provinces.loadWards(district.id.toString());
+              },
             ),
-          ),
+            SizedBox(height: Dimensions.height10),
+
+            // Dropdown Phường/Xã
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(labelText: "Phường/Xã"),
+              value: selectedWard,
+              items: provinces.wards.map((ward) {
+                return DropdownMenuItem(
+                  value: ward.name,
+                  child: Text(ward.name),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  selectedWard = value;
+                });
+              },
+            ),
+            SizedBox(height: Dimensions.height15),
+
+            CheckboxListTile(
+              title: const Text("Đặt làm mặc định"),
+              value: isDefault,
+              onChanged: (val) => setState(() => isDefault = val ?? false),
+            ),
+          ],
         ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Hủy', style: TextStyle(fontSize: Dimensions.font14, color: Colors.orange)),
+          child: Text("Hủy", style: TextStyle(color: Colors.grey)),
         ),
         ElevatedButton(
           onPressed: () async {
-            final cityName = getCityName(selectedCity);
-            final districtName = getDistrictName(selectedDistrict);
-            final wardName = getWardName(selectedWard);
             final userId = await UserSession.getUserId();
-
-            if (userId == null) {
-              return;
-            }
+            if (userId == null) return;
 
             final newAddress = AddressModel(
-              userId: userId,
               id: widget.address?.id ?? 0,
+              userId: userId,
               name: nameController.text.trim(),
               phone: phoneController.text.trim(),
               address: addressController.text.trim(),
-              city: cityName,
-              district: districtName,
-              ward: wardName,
-              isDefault: true, // Đảm bảo địa chỉ mới là mặc định
+              city: selectedCity,
+              district: selectedDistrict,
+              ward: selectedWard,
+              isDefault: isDefault,
             );
-
-            // Đảm bảo địa chỉ cũ được cập nhật lại là không mặc định
-
-
             widget.onSave(newAddress);
             Navigator.pop(context);
           },
-          child: Text(widget.address == null ? 'Thêm' : 'Cập nhật', style: TextStyle(fontSize: Dimensions.font16)),
+          child: Text(widget.address == null ? 'Thêm' : 'Cập nhật'),
         ),
       ],
     );
-  }
-
-  List<DropdownMenuItem<String>> _buildCityDropdownItems(BuildContext context) {
-    final cities = Provider.of<ProvincesController>(context).cities;
-    return cities
-        .map((city) => DropdownMenuItem<String>(
-      value: city.id.toString(),
-      child: Text(city.name),
-    ))
-        .toList();
-  }
-
-  List<DropdownMenuItem<String>> _buildDistrictDropdownItems(BuildContext context) {
-    final districts = Provider.of<ProvincesController>(context).districts;
-    return districts
-        .map((district) => DropdownMenuItem<String>(
-      value: district.id.toString(),
-      child: Text(district.name),
-    ))
-        .toList();
-  }
-
-  List<DropdownMenuItem<String>> _buildWardDropdownItems(BuildContext context) {
-    final wards = Provider.of<ProvincesController>(context).wards;
-    return wards
-        .map((ward) => DropdownMenuItem<String>(
-      value: ward.id.toString(),
-      child: Text(ward.name),
-    ))
-        .toList();
   }
 
   Widget _customTextField({
     required TextEditingController controller,
     required String label,
     TextInputType type = TextInputType.text,
-    String? Function(String?)? validator,
-    Color borderColor = Colors.black,
   }) {
-    return TextFormField(
+    return TextField(
       controller: controller,
       keyboardType: type,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.black),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimensions.radius12),
-          borderSide: BorderSide(color: borderColor, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(Dimensions.radius12),
-          borderSide: BorderSide(color: Colors.orange, width: 1),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(Dimensions.radius10)),
       ),
-      validator: validator,
     );
   }
 }
